@@ -1,4 +1,4 @@
 # LovelyLLamas
 
-poetry install
-poetry shell
+- poetry install
+- poetry shell
