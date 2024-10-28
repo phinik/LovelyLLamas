@@ -8,7 +8,7 @@ import json
 import pandas as pd
 import re
 from io import StringIO
-from datetime import datetime
+import datetime
 from libc.string cimport strlen
 from cpython cimport array
 import numpy as np
@@ -44,7 +44,7 @@ cdef class WeatherDataExtractor:
                 "climate_table": None,
                 "sub_areas_weather": None
             },
-            "created_on": str(datetime.now())
+            "created_on": str(datetime.datetime.now())
         }
 
         # Predefined XPaths for data extraction
@@ -138,7 +138,6 @@ cdef class WeatherDataExtractor:
         """Convert the rainfall data string into a DataFrame."""
         cdef str rainfall_text = etree.tostring(element[0], method="text", encoding="unicode").replace("\n", "").replace("\t", "").replace("Weitere Werte anzeigen", "").strip()
         
-        # Use regex to find time and description pairs
         pattern = r'(\d{2}:\d{2})\s+([^0-9]*)'
         matches = re.findall(pattern, rainfall_text)
 
@@ -151,11 +150,68 @@ cdef class WeatherDataExtractor:
     @cython.wraparound(False)
     cdef object _parse_overview_data(self, list element):
         """Parse overview data from the provided element into a DataFrame."""
-        cdef str overview_text = etree.tostring(element[0], method="text", encoding="unicode").replace("\n", "").replace("\t", "").strip()
-        cdef list overview_list = [elem for elem in re.sub(r' {2,}', '~', overview_text).strip().split("~") if len(elem) < 16]
+        cdef:
+            list overview_text_list = []
+            str overview_text1
+            list filtered_elements
+            object elem
+            object time_match
+            list clearness_matches, temp_matches, rain_chance_matches
+            list rain_amount_matches, wind_dir_matches, wind_speed_matches
+            list extras_matches
+        
+        # Compile regex patterns once for better performance
+        cdef:
+            object time_pattern = re.compile(r'\d{2} - \d{2} Uhr')
+            object clearness_pattern = re.compile(r'r [\w+ ]+ ')
+            object temp_pattern = re.compile(r'\d+°')
+            object rain_chance_pattern = re.compile(r'\d+ %')
+            object rain_amount_pattern = re.compile(r'\d+ l/m²')
+            object wind_dir_pattern = re.compile(r'm² \w+')
+            object wind_speed_pattern = re.compile(r'\d+ km/h')
+            object extras_pattern = re.compile(r'h[\w+ ]+$')
+        
+        for elem in element:
+            if isinstance(elem, etree._Element):
+                # Using XPath to filter elements
+                filtered_elements = elem.xpath(".//*[contains(@class, 'swg-row-wrapper border--grey-next')]")
+                
+                for filtered_elem in filtered_elements:
+                    # Convert to text and clean
+                    overview_text1 = re.sub(
+                        r'\s+', 
+                        ' ', 
+                        etree.tostring(filtered_elem, method="text", encoding="unicode").replace("\n", "").replace("\t", "").strip()
+                    )
+                    
+                    # Extract data with null checks for each pattern
+                    time_match = time_pattern.match(overview_text1)
+                    clearness_matches = clearness_pattern.findall(overview_text1)
+                    temp_matches = temp_pattern.findall(overview_text1)
+                    rain_chance_matches = rain_chance_pattern.findall(overview_text1)
+                    rain_amount_matches = rain_amount_pattern.findall(overview_text1)
+                    wind_dir_matches = wind_dir_pattern.findall(overview_text1)
+                    wind_speed_matches = wind_speed_pattern.findall(overview_text1)
+                    extras_matches = extras_pattern.findall(overview_text1)
+                    
+                    overview_text_list.append(
+                        [
+                            time_match.group(0) if time_match else "",
+                            clearness_matches[0][2:-1] if clearness_matches else "",
+                            temp_matches[0] if temp_matches else "",
+                            rain_chance_matches[0] if rain_chance_matches else "",
+                            rain_amount_matches[0] if rain_amount_matches else "",
+                            wind_dir_matches[0][3:] if wind_dir_matches else "",
+                            wind_speed_matches[0] if wind_speed_matches else "",
+                            extras_matches[0][2:] if extras_matches else ""
+                        ]
+                    )
+        
+        # Convert to DataFrame
         return pd.DataFrame(
-            self._split_list(overview_list, 7),
-            columns=["Time", "Clearness", "Temperature", "Rain Chance", "Rain Amount", "Wind Direction", "Wind Speed"]
+            overview_text_list,
+            columns=["Time", "Clearness", "Temperature", "Rain Chance", 
+                    "Rain Amount", "Wind Direction", "Wind Speed", "Extras"]
         )
 
     @cython.boundscheck(False)
@@ -183,11 +239,39 @@ cdef class WeatherDataExtractor:
 
     def save_data_to_json(self, str filename="data/weather_data.json"):
         """Write the extracted data to a JSON file."""
+        # Create a standardized Dict for the AI input
+        cdef dict standardized_dict = {
+            "city": filename.split("/")[-1][:-5],  # Remove .json extension
+            "created_day": str(datetime.date.today()),
+            "created_time": datetime.datetime.now().strftime("%H:%M:%S"),
+            "report_short": self._data["strings"]["weather_description"],
+            "report_long": self._data["strings"]["further_details"],
+            "sunrise": self._data["strings"]["sunrise"],
+            "sundown": self._data["strings"]["sundown"],
+            "sunhours": self._data["strings"]["sunhours"],
+            "times": self._data["tabular"]["overview"]["Time"].to_list(),
+            "clearness": self._data["tabular"]["overview"]["Clearness"].to_list(),
+            "overview": self._data["tabular"]["overview"].to_csv(index=False),
+            "temperatur_in_deg_C": self._data["tabular"]["diagram"].iloc[6].to_list(),
+            "niederschlagsrisiko_in_perc": self._data["tabular"]["diagram"].iloc[8].to_list(),
+            "niederschlagsmenge_in_l_per_sqm": self._data["tabular"]["diagram"].iloc[10].to_list(),
+            "windrichtung": self._data["tabular"]["diagram"].iloc[12].to_list(),
+            "windgeschwindigkeit_in_km_per_s": self._data["tabular"]["diagram"].iloc[13].to_list(),
+            "luftdruck_in_hpa": self._data["tabular"]["diagram"].iloc[15].to_list(),
+            "relative_feuchte_in_perc": self._data["tabular"]["diagram"].iloc[17].to_list(),
+            "bewölkungsgrad": self._data["tabular"]["diagram"].iloc[19].to_list()
+        }
+        
         # Convert DataFrame to a dictionary for JSON serialization if applicable
         cdef dict data_copy = self._data.copy()
         for key in data_copy["tabular"].keys():
             if isinstance(data_copy["tabular"][key], pd.DataFrame):
                 data_copy["tabular"][key] = data_copy["tabular"][key].to_csv(index=False)
+
+        # Save Standardized and self._data
+        with open(f"{filename[:-4]}_standardised.json", "w", encoding="utf-8") as file:
+            json.dump(standardized_dict, file, ensure_ascii=False, indent=4)
+        print(f"Organised Data saved to {filename[:-4]}_standardised.json")
 
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(data_copy, file, ensure_ascii=False, indent=4)
