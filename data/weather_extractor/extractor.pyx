@@ -269,9 +269,9 @@ cdef class WeatherDataExtractor:
                 data_copy["tabular"][key] = data_copy["tabular"][key].to_csv(index=False)
 
         # Save Standardized and self._data
-        with open(f"{filename[:-4]}_standardised.json", "w", encoding="utf-8") as file:
+        with open(f"{filename[:-5]}_standardised.json", "w", encoding="utf-8") as file:
             json.dump(standardized_dict, file, ensure_ascii=False, indent=4)
-        print(f"Organised Data saved to {filename[:-4]}_standardised.json")
+        print(f"Organised Data saved to {filename[:-5]}_standardised.json")
 
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(data_copy, file, ensure_ascii=False, indent=4)

@@ -231,9 +231,9 @@ class WeatherDataExtractor:
                 self._data["tabular"][key] = self._data["tabular"][key].to_csv(index=False)
 
         # Save Standardized and self._data
-        with open(f"{filename[:-4]}_standardised.json", "w", encoding="utf-8") as file:
+        with open(f"{filename[:-5]}_standardised.json", "w", encoding="utf-8") as file:
             json.dump(standardized_dict, file, ensure_ascii=False, indent=4)
-        print(f"Organised Data saved to {filename[:-4]}_standardised.json")
+        print(f"Organised Data saved to {filename[:-5]}_standardised.json")
 
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(self._data, file, ensure_ascii=False, indent=4)  # Save data in JSON format
