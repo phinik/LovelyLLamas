@@ -88,6 +88,12 @@ class WeatherDataExtractor:
                     self._data["tabular"][key] = self._parse_rainfall_data(element)
                 elif key == "overview":
                     self._data["tabular"][key] = self._parse_overview_data(element)
+                    # Exit Condition based on TimeZone
+                    try:
+                        if self._data["tabular"][key] == None:
+                            break
+                    except Exception:
+                        pass
                 elif key == "sub_areas_weather":
                     self._data["tabular"][key] = self._parse_sub_area_data(element)
                 else:
@@ -171,10 +177,15 @@ class WeatherDataExtractor:
                         ]
                     )
         # Join all filtered text parts together into a single string (if needed)
-        return pd.DataFrame(
+        overview_df = pd.DataFrame(
             overview_text_list, 
             columns=["Time", "Clearness", "Temperature", "Rain Chance", "Rain Amount", "Wind Direction", "Wind Speed", "Extras"]
         )
+        # If TimeZone is not correct, stop the process
+        if overview_df["Time"].loc[0] != "00 - 01 Uhr":
+            return None
+        else:
+            return overview_df
 
     def _parse_sub_area_data(self, element):
         """Parse sub-area weather data from the provided element into a DataFrame."""
@@ -202,6 +213,9 @@ class WeatherDataExtractor:
     
     def save_data_to_json(self, filename="data/weather_data.json"):
         """Write the extracted data to a JSON file."""
+        # TimeZone Exit Condition
+        if self._data["tabular"]["overview"] is None:
+            return
         # Create a standardized Dict for the AI input
         standardized_dict = {
             "city": filename.split("/")[-1][:-5],
@@ -242,6 +256,6 @@ class WeatherDataExtractor:
 
 # Usage example
 if __name__ == "__main__":
-    url = "https://www.wetter.com/nigeria/abuja/NG2352778.html"
+    url = "https://www.wetter.com/schweden/stockholm/SE0ST0012.html"
     extractor = WeatherDataExtractor(url)  # Create an instance of the extractor
     extractor.save_data_to_json("Abuja.json")  # Save the extracted data to "weather_data.json"

@@ -106,6 +106,12 @@ cdef class WeatherDataExtractor:
                     self._data["tabular"][key] = self._parse_rainfall_data(element)
                 elif key == "overview":
                     self._data["tabular"][key] = self._parse_overview_data(element)
+                    # Exit Condition based on TimeZone
+                    try:
+                        if self._data["tabular"][key] == None:
+                            break
+                    except Exception:
+                        pass
                 elif key == "sub_areas_weather":
                     self._data["tabular"][key] = self._parse_sub_area_data(element)
                 else:
@@ -208,11 +214,16 @@ cdef class WeatherDataExtractor:
                     )
         
         # Convert to DataFrame
-        return pd.DataFrame(
+        overview_df = pd.DataFrame(
             overview_text_list,
             columns=["Time", "Clearness", "Temperature", "Rain Chance", 
                     "Rain Amount", "Wind Direction", "Wind Speed", "Extras"]
         )
+        # If TimeZone is not correct, stop the process
+        if overview_df["Time"].loc[0] != "00 - 01 Uhr":
+            return None
+        else:
+            return overview_df
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -239,6 +250,9 @@ cdef class WeatherDataExtractor:
 
     def save_data_to_json(self, str filename="data/weather_data.json"):
         """Write the extracted data to a JSON file."""
+        # TimeZone Exit Condition
+        if self._data["tabular"]["overview"] is None:
+            return
         # Create a standardized Dict for the AI input
         cdef dict standardized_dict = {
             "city": filename.split("/")[-1][:-5],  # Remove .json extension
