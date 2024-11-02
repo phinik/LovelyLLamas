@@ -2,6 +2,6 @@ class DataPostProcessor:
     def __init__(self):
         pass
 
-    def postprocess(self, data):
+    def process(self, data):
         # TODO 
         return data
