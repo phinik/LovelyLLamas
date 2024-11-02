@@ -6,6 +6,7 @@ from typing import Dict
 
 from torch.utils.data import Dataset
 
+
 class Split(Enum):
     TRAIN = "train",
     EVAL = "eval",
