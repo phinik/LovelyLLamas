@@ -21,6 +21,7 @@ torch = "^2.5.0"
 tensorboard = "^2.18.0"
 setuptools = "^75.2.0"
 wheel = "^0.44.0"
+spacy = "^3.8.2"
 
 [build-system]
 requires = ["poetry-core"]
