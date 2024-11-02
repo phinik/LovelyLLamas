@@ -27,6 +27,7 @@ wheels/
 
 # Data
 *.json
+!tests/test_weather_dataset/*/*.json
 data/*.csv
 
 # IDEs
