@@ -1,2 +1,2 @@
-from lstm import LSTM
-from transformer import Transformer
+from src.models.lstm import LSTM
+from src.models.transformer import Transformer
