@@ -26,15 +26,8 @@ wheels/
 *.pyd
 
 # Data
-*.json
-!tests/test_weather_dataset/*/*.json
+data/*.json
 data/*.csv
-
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
 
 # Environment
 .env
