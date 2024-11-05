@@ -26,7 +26,7 @@ wheels/
 *.pyd
 
 # Data
-data/*.json
+data/**/*.json
 data/*.csv
 
 # Environment
