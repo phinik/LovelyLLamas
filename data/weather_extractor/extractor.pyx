@@ -13,19 +13,32 @@ from libc.string cimport strlen
 from cpython cimport array
 import numpy as np
 
-cdef class WeatherDataExtractor:
+class WeatherDataExtractor:
+    
+    def __init__(self, url: str, timezone: bool = True):
+        self._extractor = _WeatherDataExtractor(url, timezone)
+
+    def return_only_data(self):
+        return self._extractor.return_only_data()
+
+    def save_data_to_json(self, filename="data/weather_data.json"):
+        self._extractor.save_data_to_json(filename)
+
+cdef class _WeatherDataExtractor:
     cdef str _url
     cdef dict _headers
     cdef dict _data
     cdef dict _xpaths
+    cdef bint _use_timezone
 
-    def __init__(self, str url):
+    def __init__(self, str url, bint timezone):
         """Initialize the WeatherDataExtractor with the provided URL."""
         self._url = url
         self._headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
             "Accept-Language": "de-DE,de;q=0.9",
         }
+        self._use_timezone = timezone
         
         # Data structure to hold extracted data
         self._data = {
@@ -220,7 +233,7 @@ cdef class WeatherDataExtractor:
                     "Rain Amount", "Wind Direction", "Wind Speed", "Extras"]
         )
         # If TimeZone is not correct, stop the process
-        if overview_df["Time"].loc[0] != "00 - 01 Uhr":
+        if overview_df["Time"].loc[0] != "00 - 01 Uhr" and self._use_timezone:
             return None
         else:
             return overview_df
@@ -247,6 +260,10 @@ cdef class WeatherDataExtractor:
     cdef list _split_list(self, list original_list, int n):
         """Split a list into chunks of size n."""
         return [original_list[i:i + n] for i in range(0, len(original_list), n)]
+
+    def return_only_data(self):
+        """Used when double checking if the weather text has been added"""
+        return self._data
 
     def save_data_to_json(self, str filename="data/weather_data.json"):
         """Write the extracted data to a JSON file."""

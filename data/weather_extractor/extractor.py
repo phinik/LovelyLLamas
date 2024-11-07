@@ -7,9 +7,13 @@ from io import StringIO
 import datetime
 
 class WeatherDataExtractor:
-    def __init__(self, url):
-        """Initialize the WeatherDataExtractor with the provided URL."""
+    def __init__(self, url: str, timezone: bool = True):
+        """
+        Initialize the WeatherDataExtractor with the provided URL.
+        Timezone parameter used to see if timezone specific data should be considered.
+        """
         self._url = url
+        self._timezone = timezone
         self._headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
             "Accept-Language": "de-DE,de;q=0.9",
@@ -182,7 +186,7 @@ class WeatherDataExtractor:
             columns=["Time", "Clearness", "Temperature", "Rain Chance", "Rain Amount", "Wind Direction", "Wind Speed", "Extras"]
         )
         # If TimeZone is not correct, stop the process
-        if overview_df["Time"].loc[0] != "00 - 01 Uhr":
+        if overview_df["Time"].loc[0] != "00 - 01 Uhr" and self._timezone:
             return None
         else:
             return overview_df
@@ -211,6 +215,10 @@ class WeatherDataExtractor:
         """Split a list into chunks of size n."""
         return [original_list[i:i + n] for i in range(0, len(original_list), n)]
     
+    def return_only_data(self):
+        """Used when double checking if the weather text has been added"""
+        return self._data
+
     def save_data_to_json(self, filename="data/weather_data.json"):
         """Write the extracted data to a JSON file."""
         # TimeZone Exit Condition
