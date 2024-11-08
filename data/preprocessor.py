@@ -35,32 +35,40 @@ class CleanOverview:
             overview = data['overview']
             # Remove optional header
             overview = re.sub(r"^Time,Clearness,Temperature,Rain Chance,Rain Amount,Wind Direction,Wind Speed,Extras", "", overview)
-            # Replace line breaks with spaces
-            overview = overview.replace('\n', ' ')
+            # Replace line breaks with commas
+            overview = overview.replace('\r\n', ',')
+            overview = overview.replace('\n', ',')
+            # Replace further spaces
+            overview = overview.replace('\u202f', '')
+            overview = overview.replace('\xa0', '')
             data['overview'] = overview
         return data
 
 
-class AddBewolkungsgradToWeatherData:
-    # Fügt den Bewölkungsgrad vor jede Zeile in den Wetterdaten hinzu
+class AddBewolkungsgradToOverview:
+    # add cloudiness information to the 'overview' field
     def __init__(self):
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        # Überprüft, ob die Schlüssel 'bewölkungsgrad' und 'weather_data' im Dictionary vorhanden sind
-        if 'bewölkungsgrad' in data and 'weather_data' in data:
-            # Splitte 'weather_data' in Zeilen
-            lines = data['weather_data'].split('\n')
+        # test if 'bewölkungsgrad' and 'overview' are in the data
+        if 'bewölkungsgrad' in data and 'overview' in data:
+            # Split the 'overview' field into lines at <kmh> and add the respective cloudiness information
+            lines = data['overview'].split('<kmh>')
             bewölkungsgrad = data['bewölkungsgrad']
-            
-            # Modifiziere jede Zeile durch Voranstellen des jeweiligen Bewölkungsgrads
-            modified_lines = [
-                f"Bewölkungsgrad: {bewölkungsgrad[i]} | {line}" if line.strip() else line
-                for i, line in enumerate(lines) if i < len(bewölkungsgrad)
-            ]
-            
-            # Setze die modifizierten Zeilen wieder als String zusammen
-            data['weather_data'] = '\n'.join(modified_lines)
+            modified_lines = []
+            for i, line in enumerate(lines):
+                if i < len(data['bewölkungsgrad']):
+                    modified_lines.append(f"{line},{data['bewölkungsgrad'][i]}")
+                else:
+                    modified_lines.append(line)
+
+            # reassemble the 'overview' field
+            data['overview'] = '\n'.join(modified_lines)
+
+            # add "Bewöllkungsgrad" to the header
+            lines = data['overview'].split('Wind Speed')
+            data['overview'] = ',Wind Speed,Bewölkungsgrad'.join(lines)
         
         return data
 
@@ -151,9 +159,9 @@ data = {
 pipeline = PreprocessorPipeline([
     ReplaceNaNs(),
     ReplaceCityName(),
-    CleanOverview(),
-    AddBewolkungsgradToWeatherData(),
     TokenizeUnits(),
+    AddBewolkungsgradToOverview(),
+    CleanOverview(),
     ReduceKeys()
 ])
 
