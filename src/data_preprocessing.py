@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 # so vom stil her wie the torchvision transforms wäre glaube ich ganz cool, also für jede einzelne Operation eine
 # eigene Klasse ableiten
@@ -10,6 +10,26 @@ class ReplaceNaNs:
 
     def __call__(self, data: Dict) -> Dict:
         data = {k: v if v is not None else self.missing_token for k, v in data.items()}
+        return data
+
+
+class TokenizeUnits:
+    # Tokenize units in the 'report_short', 'report_long', and 'overview' fields
+    def __init__(self, unit_map: Dict[str, str] = None):
+        self.unit_map = unit_map or {
+            '°C': '<degC>',
+            '°': '<degC>',
+            'l/m²': '<l_per_sqm>',
+            'km/h': '<kmh>',
+            '%': '<percent>'
+        }
+
+    def __call__(self, data: Dict) -> Dict:
+        for key in ['report_short', 'report_long']:
+            if key in data:
+                for unit, token in self.unit_map.items():
+                    data[key] = data[key].replace(unit, token)
+
         return data
 
 
@@ -85,6 +105,7 @@ class PreprocessorPipeline:
 # Define the preprocessing pipeline
 pipeline = PreprocessorPipeline([
     ReplaceNaNs(),
+    TokenizeUnits(),
     ReplaceCityName(),
     AssembleCustomOverview(),
     ReduceKeys()
