@@ -1,7 +1,5 @@
 from typing import Dict, List
 
-# so vom stil her wie the torchvision transforms wäre glaube ich ganz cool, also für jede einzelne Operation eine
-# eigene Klasse ableiten
 
 class ReplaceNaNs:
     # Replace NaNs with a specified token
@@ -42,7 +40,8 @@ class ReplaceCityName:
         if 'report_short' in data and 'city' in data:
             data['report_short'] = data['report_short'].replace(data['city'], '<city>')
         return data
-    
+
+
 class ReduceKeys:
     def __init__(self):
         pass
@@ -55,7 +54,8 @@ class ReduceKeys:
             reduced_dict[key] = data[key]
 
         return reduced_dict
-    
+
+
 class AssembleCustomOverview:
     def __init__(self):
         pass
@@ -85,13 +85,15 @@ class AssembleCustomOverview:
         data["overview"] = s
          
         return data
-    
+
+
 class ToTensor:
     def __init__(self):
         pass
 
     def __call__(self, data: Dict) -> Dict:
         pass
+
 
 class PreprocessorPipeline:
     # Define a preprocessing pipeline
@@ -102,6 +104,7 @@ class PreprocessorPipeline:
         for transform in self.transforms:
             data = transform(data)
         return data
+
 
 # Define the preprocessing pipeline
 pipeline = PreprocessorPipeline([
