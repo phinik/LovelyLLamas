@@ -8,7 +8,7 @@ import time
 if __name__ == "__main__":
 
     current_hour = int(time.strftime("%H", time.localtime()))
-    rescrape_needed: bool = True if current_hour > 0 and current_hour < 1 else False
+    rescrape_needed: bool = True if current_hour == 23 else False
 
     # The whole block is just about getting the latest folder in which data has been set
     dir_list = sorted(
