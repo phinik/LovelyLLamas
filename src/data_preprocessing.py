@@ -57,6 +57,8 @@ class AssembleCustomOverview:
             if s != "":
                 s+= ","
 
+            clearness = clearness.replace(",", "")
+            
             s += f"{time},{clearness},{temp},{rain_risk},{rain_amount},{wind_direction},{wind_speed},{cloudiness}"
        
         data["overview"] = s
