@@ -77,6 +77,7 @@ class AssembleCustomOverview:
             if s != "":
                 s+= ","
 
+            # There is a "Wolkig, und windig" and the comma causes problems as the overview is comma separated
             clearness = clearness.replace(",", "")
             
             s += f"{time},{clearness},{temp},{rain_risk},{rain_amount},{wind_direction},{wind_speed},{cloudiness}"
