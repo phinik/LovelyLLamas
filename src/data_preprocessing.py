@@ -21,11 +21,15 @@ class IntroduceCustomTokens:
         return data
 
     
-class RemoveKeys:
+class ReduceKeys:
     def __init__(self):
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        # TODO
+        reduced_set_of_keys = ["city", "report_short", "overview"]
+
+        reduced_dict = {}
+        for key in reduced_set_of_keys:
+            reduced_dict[key] = data[key]
 
         return data
