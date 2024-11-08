@@ -32,4 +32,4 @@ class ReduceKeys:
         for key in reduced_set_of_keys:
             reduced_dict[key] = data[key]
 
-        return data
+        return reduced_dict
