@@ -15,11 +15,11 @@ class TokenizeUnits:
     # Tokenize units in the 'report_short', 'report_long', and 'overview' fields
     def __init__(self, unit_map: Dict[str, str] = None):
         self.unit_map = unit_map or {
-            '°C': '<degC>',
-            '°': '<degC>',
-            'l/m²': '<l_per_sqm>',
-            'km/h': '<kmh>',
-            '%': '<percent>'
+            '°C': ' <degC>',
+            '°': ' <degC>',
+            'l/m²': ' <l_per_sqm>',
+            'km/h': ' <kmh>',
+            '%': ' <percent>'
         }
 
     def __call__(self, data: Dict) -> Dict:
@@ -93,24 +93,3 @@ class ToTensor:
 
     def __call__(self, data: Dict) -> Dict:
         pass
-
-
-class PreprocessorPipeline:
-    # Define a preprocessing pipeline
-    def __init__(self, transforms: List):
-        self.transforms = transforms
-
-    def __call__(self, data: Dict) -> Dict:
-        for transform in self.transforms:
-            data = transform(data)
-        return data
-
-
-# Define the preprocessing pipeline
-pipeline = PreprocessorPipeline([
-    ReplaceNaNs(),
-    TokenizeUnits(),
-    ReplaceCityName(),
-    AssembleCustomOverview(),
-    ReduceKeys()
-])
