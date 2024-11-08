@@ -3,23 +3,25 @@ from typing import Dict
 # so vom stil her wie the torchvision transforms wäre glaube ich ganz cool, also für jede einzelne Operation eine
 # eigene Klasse ableiten
 
-class ReplaceLineBreaksInOverview:
+class ReplaceNaNs:
+    # Replace NaNs with a specified token
+    def __init__(self, missing_token: str = '<missing>'):
+        self.missing_token = missing_token
+
+    def __call__(self, data: Dict) -> Dict:
+        data = {k: v if v is not None else self.missing_token for k, v in data.items()}
+        return data
+
+
+class ReplaceCityName:
+    # Replace the city name in the 'report_short' field with a specified token
     def __init__(self):
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        # TODO
+        if 'report_short' in data and 'city' in data:
+            data['report_short'] = data['report_short'].replace(data['city'], '<city>')
         return data
-    
-
-class IntroduceCustomTokens:
-    def __init__(self):
-        pass
-
-    def __call__(self, data: Dict) -> Dict:
-        # TODO
-        return data
-
     
 class ReduceKeys:
     def __init__(self):
@@ -67,3 +69,21 @@ class ToTensor:
 
     def __call__(self, data: Dict) -> Dict:
         pass
+
+class PreprocessorPipeline:
+    # Define a preprocessing pipeline
+    def __init__(self, transforms: List):
+        self.transforms = transforms
+
+    def __call__(self, data: Dict) -> Dict:
+        for transform in self.transforms:
+            data = transform(data)
+        return data
+
+# Define the preprocessing pipeline
+pipeline = PreprocessorPipeline([
+    ReplaceNaNs(),
+    ReplaceCityName(),
+    AssembleCustomOverview(),
+    ReduceKeys()
+])
