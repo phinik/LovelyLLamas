@@ -41,7 +41,7 @@ class WeatherDataset(Dataset):
             self._cached_data = self._cache_data()
 
     def __len__(self) -> int:
-        return len(self._files)
+        return len(self._cached_data)
 
     def __getitem__(self, idx: int) -> Dict:
         if self._cached_data:
@@ -58,7 +58,9 @@ class WeatherDataset(Dataset):
         for file in self._files:
             data = self._load_data_from_file(file)
             data = self._transforms(data)
-            cached_data.append(data)
+            
+            if len(data["overview"].split(",")) == 192:
+                cached_data.append(data)
 
         return cached_data
 
@@ -69,11 +71,3 @@ class WeatherDataset(Dataset):
             data = json.load(f)
 
         return data
-    
-    def _apply_transforms(self, data: Dict) -> Dict:
-        for transform in self._transforms:
-            data = transform(data)
-
-        return data
-
-
