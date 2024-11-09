@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from typing import Dict
 
-from src.best_model import BestModel, OptDirection
+#from src.best_model import BestModel, OptDirection
 from src.dataloader import *
 from src.loss import CELoss
 from src.models import Transformer
@@ -59,9 +59,9 @@ class Trainer:
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
         
     def train(self):
-        best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
+        #best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
 
-        for epoch in range(1, self._config["epochs"]):
+        for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
             print(f" [TRAINING] Epoch {epoch}")
@@ -95,14 +95,8 @@ class Trainer:
             context = torch.concat(context)
 
             # Move tensors 
-            targets.to(device=DEVICE)
-            context.to(device=DEVICE)
-            
-            #target_input = [0 for i in range(self._config["block_size"])]
-            #target_input[0] = self._tokenizer.start_idx_target
-            #target_input = torch.tensor(target_input).unsqueeze(0)
-            #target_input = torch.repeat_interleave(target_input, self._config["batch_size"], 0)
-            #target_input.to(device=DEVICE)
+            targets = targets.to(device=DEVICE)
+            context = context.to(device=DEVICE)
             
             self._optimizer.zero_grad()
 
@@ -114,16 +108,8 @@ class Trainer:
                 labels = targets[:, i+1:i+1+self._config["block_size"]]
 
                 prediction = self._model(context, inputs)
-                #prediction = torch.reshape(
-                #    input=prediction, 
-                #    shape=(self._config["batch_size"], self._config["block_size"], self._tokenizer.size_target_vocab)
-                #)
-                #print(prediction)
-                #print(prediction.shape)
-                #exit()
 
-                #print(labels.shape)
-                labels = labels.reshape(self._config["batch_size"] * self._config["block_size"])
+                labels = labels.reshape(labels.shape[0] * self._config["block_size"])
                 total_loss += self._loss(prediction, labels)
 
             total_loss.backward()
@@ -136,27 +122,28 @@ class Trainer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
-    parser.add_argument("--checkpoint_path", type=str, help="Where to store checkpoints")
+    parser.add_argument("--checkpoints_path", type=str, help="Where to store checkpoints")
     parser.add_argument("--tensorboard_path", type=str, help="Where to store tensorboard summary")
     parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     
     args = parser.parse_args()
     
-    os.makedirs(args.checkpoint_path, exist_ok=True)
-    os.makedirs(args.tensorboard_path, exist_ok=True)
-
     config = {
         "dataset": args.dataset_path,
-        "checkpoints": args.checkpoint_path,
-        "tensorboard": args.tensorboard_path,
+        "checkpoints": os.path.join(args.checkpoints_path, args.name),
+        "tensorboard": os.path.join(args.tensorboard_path, args.name),
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 5,
         "epochs": 10,
         "block_size": 20
     }
+
+    os.makedirs(config["checkpoints"], exist_ok=True)
+    os.makedirs(config["tensorboard"], exist_ok=True)
 
     with open(os.path.join(config["checkpoints"], "config.json"), "w") as f:
         json.dump(config, f, sort_keys=True, indent=4)
