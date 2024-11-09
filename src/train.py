@@ -101,22 +101,23 @@ class Trainer:
             self._optimizer.zero_grad()
 
             total_loss = 0
-            
-            #print(targets.shape)
+            n_loss_values = 0
             for i in range(0, targets.shape[1] - self._config["block_size"]):
                 inputs = targets[:, i:i+self._config["block_size"]]
                 labels = targets[:, i+1:i+1+self._config["block_size"]]
 
                 prediction = self._model(context, inputs)
-
-                labels = labels.reshape(labels.shape[0] * self._config["block_size"])
+                
+                labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
+                n_loss_values += labels.shape[0] * labels.shape[1]  # B * T
 
+            total_loss /= n_loss_values
             total_loss.backward()
 
             self._optimizer.step()
             
-            self._writer.add_scalar("train/total_loss", total_loss, epoch * (i + 1))
+            self._writer.add_scalar("train/total_loss", total_loss.item(), epoch * (i + 1))
 
 
 
