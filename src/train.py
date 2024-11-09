@@ -101,18 +101,19 @@ class Trainer:
             self._optimizer.zero_grad()
 
             total_loss = 0
-            n_loss_values = 0
+            n_total_loss_values = 0
             for i in range(0, targets.shape[1] - self._config["block_size"]):
                 inputs = targets[:, i:i+self._config["block_size"]]
                 labels = targets[:, i+1:i+1+self._config["block_size"]]
 
                 prediction = self._model(context, inputs)
                 
+                n_total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
-                n_loss_values += labels.shape[0] * labels.shape[1]  # B * T
+                
 
-            total_loss /= n_loss_values
+            total_loss /= n_total_loss_values
             total_loss.backward()
 
             self._optimizer.step()
