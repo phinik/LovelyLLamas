@@ -50,8 +50,8 @@ class Generator:
         # Tokenizer
         self._tokenizer = DummyTokenizer(self._config["dataset"])
 
-    def sample(self, model):
-        model.eval()
+    def sample(self):
+        self._model.eval()
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch["overview"]
@@ -75,7 +75,7 @@ class Generator:
             i = 0
             j = 0
             while running_input[0, -2] != self._tokenizer.stop_idx_target and i < 200:
-                prediction = model(context, running_input[:, :self._config["block_size"]])
+                prediction = self._model(context, running_input[:, :self._config["block_size"]])
 
                 if j < self._config["block_size"]:
                     prediction = prediction[j, :]
