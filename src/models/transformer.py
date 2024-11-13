@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import os
 
 
 # Taken from https://github.com/jadore801120/attention-is-all-you-need-pytorch/tree/master/transformer (08 Nov. 2024)
@@ -79,8 +80,8 @@ class Transformer(nn.Module):
 
         return seq_logit.view(-1, seq_logit.size(2))
     
-    def save_as(self, path: str):
-        torch.save(self.state_dict(), path)
+    def save_as(self, dir: str, filename: str):
+        torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
     def load_from(self, path: str):
         self.load_state_dict(torch.load(path))

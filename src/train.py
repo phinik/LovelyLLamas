@@ -8,15 +8,14 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from typing import Dict
 
-#from src.best_model import BestModel, OptDirection
+from src.best_model import BestModel, OptDirection
 from src.dataloader import *
 from src.loss import CELoss
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
-
+from src.eval import Evaluator
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
 class Trainer:
     def __init__(self, config: Dict):
@@ -57,9 +56,12 @@ class Trainer:
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
+
+        self._evaluator = Evaluator(config=config.copy(), device=DEVICE)
         
+
     def train(self):
-        #best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
+        best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
 
         for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
@@ -67,7 +69,16 @@ class Trainer:
             print(f" [TRAINING] Epoch {epoch}")
             self._train_epoch(epoch=epoch)
 
-            #print(f" [EVALUATING] Epoch {epoch}")
+            print(f" [EVALUATING] Epoch {epoch}")
+            eval_dict = self._evaluator.evaluate()
+
+            self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
+
+            self._scheduler.step(eval_dict["loss"])
+
+            self._model.save_as(self._config["checkpoints"], f"checkpoint_epoch_{epoch}")
+
+            best_model_by_loss.update(epoch, self._model, eval_dict["loss"])
 
         self._writer.close()
 
@@ -118,7 +129,7 @@ class Trainer:
 
             self._optimizer.step()
             
-            self._writer.add_scalar("train/total_loss", total_loss.item(), epoch * (i + 1))
+            self._writer.add_scalar("train/loss", total_loss.item(), epoch * (i + 1))
 
 
 
