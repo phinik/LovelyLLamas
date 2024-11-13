@@ -92,7 +92,7 @@ class Generator:
                 
                 i += 1
             
-            print(f"Target: {batch["report_short"][0]}")
+            print(f"Target: {batch['report_short'][0]}")
             print(f"Predic: {self._tokenizer.itos_targets(token_sequence)}")
 
 
