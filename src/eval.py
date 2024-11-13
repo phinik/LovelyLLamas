@@ -68,7 +68,7 @@ class Evaluator:
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
                 
-        return {"loss": total_loss / total_loss_values}
+        return {"loss": (total_loss / total_loss_values).item()}
         
 if __name__ == "__main__":
     evaluator = Evaluator()
