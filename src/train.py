@@ -70,7 +70,7 @@ class Trainer:
             self._train_epoch(epoch=epoch)
 
             print(f" [EVALUATING] Epoch {epoch}")
-            eval_dict = self._evaluator.evaluate()
+            eval_dict = self._evaluator.evaluate(self._model)
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
 
