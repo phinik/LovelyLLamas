@@ -62,7 +62,7 @@ class Evaluator:
                 inputs = targets[:, i:i+self._config["block_size"]]
                 labels = targets[:, i+1:i+1+self._config["block_size"]]
 
-                prediction = self._model(context, inputs)
+                prediction = model(context, inputs)
                 
                 total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
