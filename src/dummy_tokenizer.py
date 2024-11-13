@@ -50,7 +50,7 @@ class DummyTokenizer:
     def stoi_targets(self, input: str) -> List[int]:
         input = input.replace(".", " <punkt>")
         input = input.replace(",", " <komma>")
-        input = input.replace(" ", " <space> ")
+        #input = input.replace(" ", " <space> ")
         
         words = input.split()
 
@@ -64,9 +64,9 @@ class DummyTokenizer:
     def itos_targets(self, input: List[int]) -> str:        
         words = [self._itos_targets[x] for x in input]
 
-        s = "".join(words)
+        s = " ".join(words)
 
-        s = s.replace("<space>", " ")
+        #s = s.replace("<space>", " ")
         s = s.replace(" <punkt>", ".")
         s = s.replace(" <komma>", ",")
 
