@@ -53,7 +53,7 @@ class Generator:
     def sample(self):
         self._model.eval()
 
-        for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
+        for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"]
             targets = batch["report_short"]
 
