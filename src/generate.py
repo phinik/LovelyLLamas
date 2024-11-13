@@ -28,6 +28,9 @@ class Generator:
             cached=self._config["cached"]
         )
 
+        # Tokenizer
+        self._tokenizer = DummyTokenizer(self._config["dataset"])
+
         self._model = Transformer(
         n_src_vocab=self._tokenizer.size_context_vocab, 
         n_trg_vocab=self._tokenizer.size_target_vocab, 
