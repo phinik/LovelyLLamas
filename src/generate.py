@@ -100,12 +100,14 @@ class Generator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, help="Name of the run")
+    parser.add_argument("--dataset", type=str, help="")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     
     args = parser.parse_args()
     
     config = {
         "model": args.model,
+        "dataset": args.dataset,
         "cached": args.cache_data,
         "block_size": 20
     }
