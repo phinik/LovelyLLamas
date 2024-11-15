@@ -1,0 +1,4 @@
+City,URL,Latitude,Longitude,Timezone,Error
+waikanai,https://wetter.com/neuseeland/waikanai/NZ4032815.html,-43.8167,-176.7,Pacific/Chatham,
+waitangi-west,https://wetter.com/neuseeland/waitangi-west/NZ4032800.html,-43.7833,-176.8167,Pacific/Chatham,
+waitangi,https://wetter.com/neuseeland/waitangi/NZ4032804.html,-43.9535,-176.5597,Pacific/Chatham,

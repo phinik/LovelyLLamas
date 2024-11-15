@@ -28,7 +28,7 @@ def ensure_directory_exists(directory_path: str) -> None:
 def process_city(city_data: pd.Series, output_dir: str) -> None:
     """Process a single city's weather data."""
     try:
-        city_name = city_data['Stadt']
+        city_name = city_data['City']
         output_file = f"{output_dir}/{city_name}.json"
         
         # Skip if file already exists
@@ -77,7 +77,7 @@ def worker(queue: Queue, output_dir: str, worker_id: int) -> None:
             
     logging.info("Worker shutting down", extra={'worker_id': thread_local.worker_id})
 
-def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
+def extract_weather_data(city_list_path: str, num_threads: int = 12) -> None:
     """
     Main function to extract weather data concurrently.
     
@@ -150,4 +150,4 @@ def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
             )
 
 if __name__ == "__main__":
-    extract_weather_data("data/cities.csv")
+    extract_weather_data("data/city_data.csv")

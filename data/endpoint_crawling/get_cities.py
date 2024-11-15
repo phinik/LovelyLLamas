@@ -41,7 +41,7 @@ for i in tqdm(range(len(region_data)), desc="Fetching Region Data", unit="region
                 "Region": region_name,
                 "Country": country_name,
                 "Continent": continent_name,
-                "Link": city
+                "URL": city
             }
             
             # Add the new row to the city_rows list

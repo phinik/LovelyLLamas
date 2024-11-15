@@ -27,7 +27,6 @@ wheels/
 
 # Data
 data/**/*.json
-data/*.csv
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
 
