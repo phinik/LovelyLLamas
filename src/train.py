@@ -40,7 +40,8 @@ class Trainer:
             emb_src_trg_weight_sharing=False,
             n_head=4,
             n_layers=2,
-            d_inner=512
+            d_inner=512,
+            d_model=256
         )
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])
@@ -146,6 +147,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     config = {
+        "name": args.name,
         "dataset": args.dataset_path,
         "checkpoints": os.path.join(args.checkpoints_path, args.name),
         "tensorboard": os.path.join(args.tensorboard_path, args.name),

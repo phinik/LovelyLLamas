@@ -1,21 +1,16 @@
 import argparse
-import json
-import os
 import tqdm
 import torch
-import torch.nn as nn
 
-from torch.utils.tensorboard import SummaryWriter
 from typing import Dict
 
-from src.best_model import BestModel, OptDirection
 from src.dataloader import *
-from src.loss import CELoss
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
-from src.eval import Evaluator
+
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class Generator:
     def __init__(self, config: Dict):
@@ -31,27 +26,8 @@ class Generator:
         # Tokenizer
         self._tokenizer = DummyTokenizer(self._config["dataset"])
 
-        self._model = Transformer(
-        n_src_vocab=self._tokenizer.size_context_vocab, 
-        n_trg_vocab=self._tokenizer.size_target_vocab, 
-        src_pad_idx=self._tokenizer.padding_idx_context, 
-        trg_pad_idx=self._tokenizer.padding_idx_target,
-        emb_src_trg_weight_sharing=False,
-        n_head=4,
-        n_layers=2,
-        d_inner=512
-        )
-
-        self._model.load_from(self._config["model"])
-        
-        self._model.to(DEVICE)
-            
-
-        # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
-
-    def sample(self):
-        self._model.eval()
+    def sample(self, model):
+        model.eval()
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"]
@@ -75,7 +51,7 @@ class Generator:
             i = 0
             j = 0
             while running_input[0, -2] != self._tokenizer.stop_idx_target and i < 200:
-                prediction = self._model(context, running_input[:, :self._config["block_size"]])
+                prediction = model(context, running_input[:, :self._config["block_size"]])
 
                 if j < self._config["block_size"]:
                     prediction = prediction[j, :]
@@ -91,7 +67,7 @@ class Generator:
                     running_input[0, j] = next_token 
                 else:
                     running_input[0, -1] = next_token
-                    torch.roll(running_input, -1, dims=1)
+                    running_input = torch.roll(running_input, -1, dims=1)
                 
                 i += 1
             
@@ -102,18 +78,28 @@ class Generator:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, help="Name of the run")
-    parser.add_argument("--dataset", type=str, help="")
+    parser.add_argument("--name", type=str, help="Name of the run")
+    parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
+    parser.add_argument("--model_weights", type=str, help="Which model weights to use")
+    parser.add_argument("--model_params", type=str, help="Which model params to use")
+    #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    
+
     args = parser.parse_args()
     
     config = {
-        "model": args.model,
-        "dataset": args.dataset,
+        "name": args.name,
+        "dataset": args.dataset_path,
+        "model_weights": args.model_weights,
+        "model_params": args.model_params,
         "cached": args.cache_data,
+        "model": "transformer", #args.model,
         "block_size": 20
     }
 
-    trainer = Generator(config)
-    trainer.sample()
+    model = Transformer.from_params(config["model_params"])
+    model.load_weights_from(config["model_weights"])
+    model.to(DEVICE)
+
+    generator = Generator(config)
+    generator.sample(model)
