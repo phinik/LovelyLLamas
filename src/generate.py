@@ -55,11 +55,11 @@ class Generator:
 
                 if j < self._config["block_size"]:
                     prediction = prediction[j, :]
-                    next_token = torch.multinomial(torch.softmax(prediction), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction), 1) #torch.argmax(prediction)
                     j += 1
                 else:
                     prediction = prediction[-1, :]
-                    next_token = torch.multinomial(torch.softmax(prediction), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction), 1) #torch.argmax(prediction)
 
                 token_sequence.append(next_token.item())
 
