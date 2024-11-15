@@ -76,7 +76,6 @@ class Evaluator:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
     parser.add_argument("--model_params", type=str, help="Which model params to use")
@@ -97,6 +96,7 @@ if __name__ == "__main__":
 
     model = Transformer.from_params(config["model_params"])
     model.load_weights_from(config["model_weights"])
+    model.to(DEVICE)
 
     evaluator = Evaluator(config)
     res = evaluator.evaluate(model)
