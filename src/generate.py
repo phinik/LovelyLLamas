@@ -31,7 +31,7 @@ class Generator:
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short"]
+            targets = batch["report_short"].copy()
 
             # Tokenize
             for i in range(len(context)):
@@ -73,6 +73,8 @@ class Generator:
             
             print(f"Target: {batch['report_short'][0]}")
             print(f"Predic: {self._tokenizer.itos_targets(token_sequence)}")
+
+            exit()
 
 
 
