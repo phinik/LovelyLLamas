@@ -45,7 +45,7 @@ class Generator:
             targets = targets.to(device=DEVICE)
             context = context.to(device=DEVICE)
             
-            running_input = torch.zeros(size=(1, self._config["block_size"] + 1))
+            running_input = torch.zeros(size=(1, self._config["block_size"] + 1), dtype=targets.dtype).to(DEVICE)
             running_input[0, 0] = self._tokenizer.start_idx_target
             token_sequence = []
             i = 0

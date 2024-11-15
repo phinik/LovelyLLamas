@@ -41,7 +41,8 @@ class Trainer:
             n_head=4,
             n_layers=2,
             d_inner=512,
-            d_model=256
+            d_model=256,
+            d_word_vec=256
         )
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])
