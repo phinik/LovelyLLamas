@@ -112,7 +112,8 @@ class Transformer(nn.Module):
         with open(os.path.join(dir, "params.json"), "w") as f:
             json.dump(self._params_dict, f, sort_keys=True, indent=4)
 
-    def from_params(self, path: str) -> Transformer:
+    @staticmethod
+    def from_params(path: str) -> Transformer:
         with open(path, 'r') as f:
             params = json.load(f)
 
