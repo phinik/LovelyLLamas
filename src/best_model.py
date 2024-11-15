@@ -21,7 +21,7 @@ class BestModel:
 
     def update(self, epoch: int, model, metric_value: Any) -> None:
         if self._current_model_is_better(metric_value):
-            model.save_as(self._save_path, f"best_model_{self._metric_name}")
+            model.save_weights_as(self._save_path, f"best_model_{self._metric_name}")
 
             metadata = {"epoch": epoch, self._metric_name: metric_value}
             with open(os.path.join(self._save_path, f"best_model_{self._metric_name}_metadata.json"), "w") as f:
