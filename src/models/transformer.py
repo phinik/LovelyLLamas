@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import os
+
+import json
 
 
 # Taken from https://github.com/jadore801120/attention-is-all-you-need-pytorch/tree/master/transformer (08 Nov. 2024)
@@ -19,6 +23,25 @@ class Transformer(nn.Module):
             scale_emb_or_prj='prj'):
 
         super().__init__()
+
+        self._params_dict = {
+            "n_src_vocab": n_src_vocab,
+            "n_trg_vocab": n_trg_vocab,
+            "src_pad_idx": src_pad_idx,
+            "trg_pad_idx": trg_pad_idx,
+            "d_word_vec": d_word_vec,
+            "d_model": d_model,
+            "d_inner": d_inner,
+            "n_layers": n_layers,
+            "n_head": n_head,
+            "d_k": d_k,
+            "d_v": d_v,
+            "dropout": dropout,
+            "n_position": n_position,
+            "trg_emb_prj_weight_sharing": trg_emb_prj_weight_sharing,
+            "emb_src_trg_weight_sharing": emb_src_trg_weight_sharing,
+            "scale_emb_or_prj": scale_emb_or_prj
+        }
 
         self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
 
@@ -79,11 +102,21 @@ class Transformer(nn.Module):
 
         return seq_logit.view(-1, seq_logit.size(2))
     
-    def save_as(self, dir: str, filename: str):
+    def save_weights_as(self, dir: str, filename: str):
         torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
-    def load_from(self, path: str):
+    def load_weights_from(self, path: str):
         self.load_state_dict(torch.load(path))
+
+    def save_params_to(self, dir: str):
+        with open(os.path.join(dir, "params.json"), "w") as f:
+            json.dump(self._params_dict, f, sort_keys=True, indent=4)
+
+    def from_params(self, path: str) -> Transformer:
+        with open(path, 'r') as f:
+            params = json.load(f)
+
+        return Transformer(**params)
 
 
 def get_pad_mask(seq, pad_idx):
