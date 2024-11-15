@@ -43,6 +43,7 @@ class Trainer:
             d_inner=512
         )
         self._model.to(DEVICE)
+        self._model.save_params_to(self._config["checkpoints"])
 
         print(sum([param.nelement() for param in self._model.parameters()]))
 
@@ -57,7 +58,7 @@ class Trainer:
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
 
-        self._evaluator = Evaluator(config=config.copy(), device=DEVICE)
+        self._evaluator = Evaluator(config=config.copy())
         
 
     def train(self):
@@ -76,7 +77,7 @@ class Trainer:
 
             self._scheduler.step(eval_dict["loss"])
 
-            self._model.save_as(self._config["checkpoints"], f"checkpoint_epoch_{epoch}")
+            self._model.save_weights_as(self._config["checkpoints"], f"checkpoint_epoch_{epoch}")
 
             best_model_by_loss.update(epoch, self._model, eval_dict["loss"])
 

@@ -7,12 +7,15 @@ from typing import Dict
 from src.dataloader import get_eval_dataloader_weather_dataset
 from src.dummy_tokenizer import DummyTokenizer
 from src.loss import CELoss
+from src.models import Transformer
+
+
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class Evaluator:
-    def __init__(self, config: Dict, device: torch.device):
+    def __init__(self, config: Dict):
         self._config = config
-        self._device = device
 
         # Dataloader
         self._eval_dataloader = get_eval_dataloader_weather_dataset(
@@ -55,8 +58,8 @@ class Evaluator:
             context = torch.concat(context)
 
             # Move tensors 
-            targets = targets.to(device=self._device)
-            context = context.to(device=self._device)
+            targets = targets.to(device=DEVICE)
+            context = context.to(device=DEVICE)
             
             for i in range(0, targets.shape[1] - self._config["block_size"]):
                 inputs = targets[:, i:i+self._config["block_size"]]
@@ -69,7 +72,33 @@ class Evaluator:
                 total_loss += self._loss(prediction, labels)
                 
         return {"loss": (total_loss / total_loss_values).item()}
-        
+
+
 if __name__ == "__main__":
-    evaluator = Evaluator()
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", type=str, help="Name of the run")
+    parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
+    parser.add_argument("--model_weights", type=str, help="Which model weights to use")
+    parser.add_argument("--model_params", type=str, help="Which model params to use")
+    #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
+    parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    
+    args = parser.parse_args()
+    
+    config = {
+        "dataset": args.dataset_path,
+        "model_weights": args.model_weights,
+        "model_params": args.model_params,
+        "cached": args.cache_data,
+        "model": "transformer", #args.model,
+        "batch_size": 5,
+        "block_size": 20
+    }
+
+    model = Transformer.from_params(config["model_params"])
+    model.load_weights_from(config["model_weights"])
+
+    evaluator = Evaluator(config)
+    res = evaluator.evaluate(model)
+
+    print(res)
