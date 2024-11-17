@@ -220,7 +220,7 @@ if __name__ == "__main__":
     if next_offset is not None:
         print(f"The UTC offset of the timezone with the next midnight is: UTC{next_offset:+.1f}")
         prefix = "minus" if next_offset < 0 else "plus"
-        file_name = f"{os.getcwd()}/data/timezone_splits/UTC_{prefix}_{str(next_offset).replace(".","_")}.csv"
+        file_name = f'{os.getcwd()}/data/timezone_splits/UTC_{prefix}_{str(next_offset).replace(".","_")}.csv'
        
         # Check if the file exists before proceeding with the extraction
         if os.path.exists(file_name):
