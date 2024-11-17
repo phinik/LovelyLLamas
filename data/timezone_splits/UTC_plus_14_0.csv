@@ -2,3 +2,6 @@ City,URL,Latitude,Longitude,Timezone,Error
 tanekore-village,https://wetter.com/kiribati/tanekore-village/KI4030892.html,4.6968,-160.4056,Pacific/Kiritimati,
 napari-village,https://wetter.com/kiribati/napari-village/KI4030926.html,3.9081,-159.3883,Pacific/Kiritimati,
 london,https://wetter.com/kiribati/london/KI4030939.html,1.9849,-157.475,Pacific/Kiritimati,
+waikanai,https://wetter.com/neuseeland/waikanai/NZ4032815.html,-43.8167,-176.7,Pacific/Chatham,
+waitangi-west,https://wetter.com/neuseeland/waitangi-west/NZ4032800.html,-43.7833,-176.8167,Pacific/Chatham,
+waitangi,https://wetter.com/neuseeland/waitangi/NZ4032804.html,-43.9535,-176.5597,Pacific/Chatham,
