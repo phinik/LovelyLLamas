@@ -65,7 +65,7 @@ class WeatherDataset(Dataset):
     def _load_data_from_file(self, filename: str) -> Dict:
         file_path = os.path.join(self._full_path, filename)
         
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f: # added encoding
             data = json.load(f)
 
         return data

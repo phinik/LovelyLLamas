@@ -4,13 +4,13 @@ from transformers import BertTokenizer
 from typing import List
 
 
-class Tokenzier:
+class Tokenizer:
     def __init__(self, dataset_path: str, model_name: str = "bert-base-german-cased"):
         """
         Initializes the tokenizer using a pre-trained BERT model for German.
         :param model_name: Name of the pre-trained BERT model.
         """
-        self.tokenizer = BertTokenizer.from_pretrained("model_name")
+        self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self._dataset_path = dataset_path
 
         # Special token IDs
@@ -25,7 +25,6 @@ class Tokenzier:
         """
         num_added_tokens = self.tokenizer.add_tokens(tokens)
         if num_added_tokens > 0:
-            self.model.resize_token_embeddings(len(self.tokenizer))
             print(f"Added {num_added_tokens} tokens to the tokenizer and resized embeddings.")
 
     def _load_tokens(self, filename: str) -> List:
@@ -44,11 +43,6 @@ class Tokenzier:
     
     @property
     def start_idx_target(self) -> int:
-        return self._stoi_targets["<start>"]
-    
-     @property
-    def start_idx_target(self) -> int:
-        """Returns the start token index."""
         return self._start_idx
 
     @property

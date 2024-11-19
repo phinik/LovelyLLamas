@@ -55,7 +55,7 @@ class Evaluator:
 
             # Context sequences always have equal length, hence, no padding is required and the list of tensors is just
             # concatenated.
-            context = torch.concat(context)
+            context = torch.stack(context) # torch.stack better since all sequences have the same length
 
             # Move tensors 
             targets = targets.to(device=DEVICE)
@@ -67,7 +67,7 @@ class Evaluator:
 
                 prediction = model(context, inputs)
                 
-                total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
+                total_loss_values += torch.count_nonzero(labels != self._tokenizer.padding_idx_target) # Count non-padding tokens
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
                 

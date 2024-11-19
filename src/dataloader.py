@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 
-from src.dataset import WeatherDataset, Split, TransformationPipeline
-from src.data_preprocessing import *
+from dataset import WeatherDataset, Split, TransformationPipeline
+from data_preprocessing import *
 
 def get_train_dataloader_weather_dataset(path: str, batch_size: int, cached: bool) -> DataLoader:
     dset = WeatherDataset(
