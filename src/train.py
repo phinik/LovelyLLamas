@@ -69,10 +69,10 @@ class Trainer:
         for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
-            print(f" [TRAINING] Epoch {epoch}")
+            print(f" [TRAINING] Epoch {epoch} / {self._config["epochs"]}")
             self._train_epoch(epoch=epoch)
 
-            print(f" [EVALUATING] Epoch {epoch}")
+            print(f" [EVALUATING] Epoch {epoch} / {self._config["epochs"]}")
             eval_dict = self._evaluator.evaluate(self._model)
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
