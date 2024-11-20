@@ -25,6 +25,7 @@ class Tokenizer:
         """
         num_added_tokens = self.tokenizer.add_tokens(tokens)
         if num_added_tokens > 0:
+            size_vocab = self.tokenizer.vocab_size
             print(f"Added {num_added_tokens} tokens to the tokenizer and resized embeddings.")
 
     def _load_tokens(self, filename: str) -> List:
@@ -54,25 +55,81 @@ class Tokenizer:
     def size_context_vocab(self) -> int:
         """Returns the size of the vocabulary for context."""
         return self.tokenizer.vocab_size
+    
+    @property
+    def size_target_vocab(self) -> int:
+        """Returns the size of the vocabulary for targets."""
+        return self.tokenizer.vocab_size
 
-    
-    def stoi_targets(self, input_text: str) -> List[int]:
+    def encode_plus_context(self, input_text: str) -> dict:
         """
-        Converts a target text string into a list of token IDs.
+        Tokenizes and encodes the context text, applying padding and truncation.
         :param input_text: Text to encode.
+        :return: Dictionary with 'input_ids', 'attention_mask' etc.
+        """
+        return self.tokenizer.encode_plus(
+            input_text,
+            padding='max_length',  # Ensures padding
+            truncation=True,  # Ensures truncation if text exceeds max_length
+            max_length=512,  # Adjust as needed
+            return_tensors='pt'  # Return as PyTorch tensors
+        )
+    
+    def encode_plus_target(self, input_text: str) -> dict:
+        """
+        Tokenizes and encodes the target text, applying padding and truncation.
+        :param input_text: Text to encode.
+        :return: Dictionary with 'input_ids', 'attention_mask' etc.
+        """
+        return self.tokenizer.encode_plus(
+            input_text,
+            padding='max_length',  # Ensures padding
+            truncation=True,  # Ensures truncation if text exceeds max_length
+            max_length=512,  # Adjust as needed
+            return_tensors='pt'  # Return as PyTorch tensors
+        )
+
+    def stoi_context(self, input_text: str, max_length: int = 512) -> List[int]:
+        """
+        Converts a context text string into a list of token IDs, ensuring the same length.
+        :param input_text: Text to encode.
+        :param max_length: Maximum length for padding/truncation.
         :return: List of token IDs.
         """
-        tokens = self.tokenizer.tokenize(input_text)
-        return self.tokenizer.convert_tokens_to_ids(tokens)
-    
-    def stoi_context(self, input_text: str) -> List[int]:
+        if isinstance(input_text, list):
+            input_text = " ".join(input_text)
+
+        # Tokenize and pad/truncate to max_length
+        encoding = self.tokenizer.encode_plus(
+            input_text, 
+            max_length=max_length,  # Max length
+            padding='max_length',  # Padding
+            truncation=True,  # Truncate if needed
+            return_tensors='pt',  # Return PyTorch tensor
+        )
+        return encoding['input_ids'].squeeze(0).tolist()  # Convert to list
+
+    def stoi_targets(self, input_text: str, max_length: int = 512) -> List[int]:
         """
-        Converts a context text string into a list of token IDs.
+        Converts a target text string into a list of token IDs, ensuring the same length.
         :param input_text: Text to encode.
+        :param max_length: Maximum length for padding/truncation.
         :return: List of token IDs.
         """
-        tokens = self.tokenizer.tokenize(input_text)
-        return self.tokenizer.convert_tokens_to_ids(tokens)
+        if isinstance(input_text, list):
+            input_text = " ".join(input_text)
+
+        # Tokenize and pad/truncate to max_length
+        encoding = self.tokenizer.encode_plus(
+            input_text,
+            max_length=max_length,  # Max length
+            padding='max_length',  # Padding
+            truncation=True,  # Truncate if needed
+            return_tensors='pt',  # Return PyTorch tensor
+        )
+        return encoding['input_ids'].squeeze(0).tolist()  # Convert to list
+
+
 
     def itos_targets(self, token_ids: List[int]) -> str:
         """
