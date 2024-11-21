@@ -184,22 +184,17 @@ if __name__ == "__main__":
             current_offset = get_current_utc_offset(local_timezone)
             
             # Step 2: Calculate midnight of the next day
-            # If current time is 23:00, midnight_today should be 2024-11-18 00:00
-            midnight_today = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-            if current_time > midnight_today:  # If the current time is after midnight today
-                midnight_today = midnight_today + datetime.timedelta(days=1)  # Move to next day
+            midnight_today = current_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
 
             # Step 3: Calculate the time difference between now and the next midnight
             time_to_midnight = midnight_today - current_time
-
-            # Step 4: Determine whether to round up or down based on the time difference
-            if abs(time_to_midnight.total_seconds()) > 1800:  # more than 30 minutes
-                next_offset = current_offset + 1 if time_to_midnight.total_seconds() > 0 else current_offset - 1
-            else:
-                next_offset = current_offset  # No rounding needed if the difference is <= 30 minutes
             
-            # Step 5: Ensure the offset is within the range UTC-10 to UTC+14
-            next_offset = max(-10, min(14, next_offset))  # Clamp the offset between -10 and +14
+            next_offset = 24 - time_to_midnight.seconds//3600 - 2
+
+            if next_offset == -1:
+                next_offset = 23
+            if next_offset == -2:
+                next_offset = 22
 
             return next_offset
 
@@ -218,9 +213,9 @@ if __name__ == "__main__":
     next_offset = get_next_timezone_offset(current_time, timezone_str)
 
     if next_offset is not None:
-        print(f"The UTC offset of the timezone with the next midnight is: UTC{next_offset:+.1f}")
-        prefix = "minus" if next_offset < 0 else "plus"
-        file_name = f'{os.getcwd()}/data/timezone_splits/UTC_{prefix}_{str(next_offset).replace(".","_")}.csv'
+        print(f"The UTC offset of the timezone with the next midnight is: UTC+{next_offset}")
+        file_name = f'{os.getcwd()}/data/timezone_splits/UTC_plus_{str(next_offset).replace(".","_")}_0.csv'
+        print(file_name)
        
         # Check if the file exists before proceeding with the extraction
         if os.path.exists(file_name):

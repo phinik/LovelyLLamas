@@ -19,7 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+get-pip.py
 # Cython
 *.c
 *.cpp
