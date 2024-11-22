@@ -13,6 +13,24 @@ class Tokenizer:
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self._dataset_path = dataset_path
 
+        self._target_tokens = list(self.tokenizer.get_vocab().keys())
+        self._context_tokens = list(self.tokenizer.get_vocab().keys())
+
+        custom_tokens = ["<start>", "<stop>", "<padding>", "degC", "l_per_sqm", "kmh", "percent"]
+        self._target_tokens += custom_tokens
+
+        self._stoi_targets = {token: i for i, token in enumerate(self._target_tokens)}
+        self._stoi_context = {token: i for i, token in enumerate(self._context_tokens)}
+
+        # Rebuild the dictionaries for custom tokens
+        for idx, token in enumerate(custom_tokens, len(self.tokenizer.get_vocab())):
+            self._stoi_targets[token] = idx
+            self._stoi_context[token] = idx
+
+        # Invert the dictionaries
+        self._itos_targets = {i: token for token, i in self._stoi_targets.items()}
+        self._itos_context = {i: token for token, i in self._stoi_targets.items()}
+
         # Special token IDs
         self._padding_idx = self.tokenizer.pad_token_id
         self._start_idx = self.tokenizer.cls_token_id
@@ -34,115 +52,56 @@ class Tokenizer:
 
     @property
     def padding_idx_context(self) -> int:
-        """Returns the padding token index for context."""
-        return self._padding_idx
+        return self._stoi_context["<padding>"]
     
     @property
     def padding_idx_target(self) -> int:
-        """Returns the padding token index for targets."""
-        return self._padding_idx
-    
+        return self._stoi_targets["<padding>"]
+        
     @property
     def start_idx_target(self) -> int:
-        return self._start_idx
-
+        return self._stoi_targets["<start>"]
+    
     @property
     def stop_idx_target(self) -> int:
-        """Returns the stop token index."""
-        return self._stop_idx
-
+        return self._stoi_targets["<stop>"]
+    
     @property
     def size_context_vocab(self) -> int:
-        """Returns the size of the vocabulary for context."""
-        return self.tokenizer.vocab_size
+        return max(self._stoi_context.values()) + 1
     
     @property
     def size_target_vocab(self) -> int:
-        """Returns the size of the vocabulary for targets."""
-        return self.tokenizer.vocab_size
+        return max(self._stoi_targets.values()) + 1
 
-    def encode_plus_context(self, input_text: str) -> dict:
+    def stoi_targets(self, token: str) -> int:
         """
-        Tokenizes and encodes the context text, applying padding and truncation.
-        :param input_text: Text to encode.
-        :return: Dictionary with 'input_ids', 'attention_mask' etc.
+        Maps a target token to its corresponding index.
+        :param token: Token to map.
+        :return: Corresponding index or raises KeyError if token is not found.
         """
-        return self.tokenizer.encode_plus(
-            input_text,
-            padding='max_length',  # Ensures padding
-            truncation=True,  # Ensures truncation if text exceeds max_length
-            max_length=512,  # Adjust as needed
-            return_tensors='pt'  # Return as PyTorch tensors
-        )
-    
-    def encode_plus_target(self, input_text: str) -> dict:
-        """
-        Tokenizes and encodes the target text, applying padding and truncation.
-        :param input_text: Text to encode.
-        :return: Dictionary with 'input_ids', 'attention_mask' etc.
-        """
-        return self.tokenizer.encode_plus(
-            input_text,
-            padding='max_length',  # Ensures padding
-            truncation=True,  # Ensures truncation if text exceeds max_length
-            max_length=512,  # Adjust as needed
-            return_tensors='pt'  # Return as PyTorch tensors
-        )
+        return self._stoi_targets.get(token, None)
 
-    def stoi_context(self, input_text: str, max_length: int = 512) -> List[int]:
+    def stoi_context(self, token: str) -> int:
         """
-        Converts a context text string into a list of token IDs, ensuring the same length.
-        :param input_text: Text to encode.
-        :param max_length: Maximum length for padding/truncation.
-        :return: List of token IDs.
+        Maps a context token to its corresponding index.
+        :param token: Token to map.
+        :return: Corresponding index or raises KeyError if token is not found.
         """
-        if isinstance(input_text, list):
-            input_text = " ".join(input_text)
+        return self._stoi_context.get(token, None)
 
-        # Tokenize and pad/truncate to max_length
-        encoding = self.tokenizer.encode_plus(
-            input_text, 
-            max_length=max_length,  # Max length
-            padding='max_length',  # Padding
-            truncation=True,  # Truncate if needed
-            return_tensors='pt',  # Return PyTorch tensor
-        )
-        return encoding['input_ids'].squeeze(0).tolist()  # Convert to list
-
-    def stoi_targets(self, input_text: str, max_length: int = 512) -> List[int]:
+    def itos_targets(self, idx: int) -> str:
         """
-        Converts a target text string into a list of token IDs, ensuring the same length.
-        :param input_text: Text to encode.
-        :param max_length: Maximum length for padding/truncation.
-        :return: List of token IDs.
+        Maps a target index to its corresponding token.
+        :param idx: Index to map.
+        :return: Corresponding token or raises KeyError if index is not found.
         """
-        if isinstance(input_text, list):
-            input_text = " ".join(input_text)
+        return self._itos_targets.get(idx, None)
 
-        # Tokenize and pad/truncate to max_length
-        encoding = self.tokenizer.encode_plus(
-            input_text,
-            max_length=max_length,  # Max length
-            padding='max_length',  # Padding
-            truncation=True,  # Truncate if needed
-            return_tensors='pt',  # Return PyTorch tensor
-        )
-        return encoding['input_ids'].squeeze(0).tolist()  # Convert to list
-
-
-
-    def itos_targets(self, token_ids: List[int]) -> str:
+    def itos_context(self, idx: int) -> str:
         """
-        Converts a list of token IDs back into a target text string.
-        :param token_ids: List of token IDs.
-        :return: Decoded text string.
+        Maps a context index to its corresponding token.
+        :param idx: Index to map.
+        :return: Corresponding token or raises KeyError if index is not found.
         """
-        return self.tokenizer.decode(token_ids, skip_special_tokens=True)
-
-    def itos_context(self, token_ids: List[int]) -> str:
-        """
-        Converts a list of token IDs back into a context text string.
-        :param token_ids: List of token IDs.
-        :return: Decoded text string.
-        """
-        return self.tokenizer.decode(token_ids, skip_special_tokens=True)
+        return self._itos_context.get(idx, None)

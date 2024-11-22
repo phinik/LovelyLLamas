@@ -3,15 +3,6 @@ from dataloader import get_train_dataloader_weather_dataset, get_eval_dataloader
 from dataset import WeatherDataset, Split, TransformationPipeline
 from data_preprocessing import *
 
-# Initialisierung der Transformationen
-transformations = TransformationPipeline([
-    ReplaceNaNs(),
-    ReplaceCityName(),
-    TokenizeUnits(),
-    AssembleCustomOverview(),
-    ReduceKeys()
-])
-
 # Dataloader für das Training
 train_dataloader = get_train_dataloader_weather_dataset(
     path='C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset', 
@@ -27,13 +18,12 @@ eval_dataloader = get_eval_dataloader_weather_dataset(
 )
 
 # Initialisiere den Tokenizer
-tokenizer = Tokenizer(dataset_path='path_to_vocab')
+tokenizer = Tokenizer(dataset_path='C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset')
 # add tokens to the tokenizer
-tokenizer.add_custom_tokens(['<start>', '<stop>'])
+tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<l_per_sqm>', '<kmh>', '<percent>'])
 
-# Beispiel für die Tokenisierung einer Eingabe
-input_text = "Berlin hat eine Temperatur von 20°C und es regnet."
-token_ids = tokenizer.stoi_context(input_text)
+# Tokenize the sample text
+#tokenized_output = tokenizer.stoi_context(sample_text)
 
 import torch
 import torch.nn as nn
@@ -56,72 +46,75 @@ class WeatherLSTM(nn.Module):
 
 def train(model, dataloader, optimizer, criterion, device):
     model.train()
+
     total_loss = 0
     
-    for batch in dataloader:
-        inputs = batch["overview"]  # Example input text
+    for i, batch in enumerate(dataloader):
+        context = batch["overview"]  # Example input text
         targets = batch["report_short"]  # Example target text
         
         # Tokenize input and target data with padding and truncation
-        input_encodings = tokenizer.encode_plus_context(inputs)
-        target_encodings = tokenizer.encode_plus_target(targets)
+        for j in range(len(context)):
+            print(context[j])
+            context[j] = torch.tensor(tokenizer.stoi_context(context[j])).unsqueeze(0)
+            targets[j] = torch.tensor(tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
         
-        # Extract input IDs and attention masks
-        input_ids = input_encodings['input_ids'].to(device)
-        target_ids = target_encodings['input_ids'].to(device)
+        targets = nn.utils.rnn.pad_sequence(targets, padding_value=tokenizer.padding_idx_target, batch_first=True)
+        context = torch.cat(context)
 
-        # Ensure that input and target lengths match
-        assert input_ids.size(1) == target_ids.size(1), f"Input length {input_ids.size(1)} != Target length {target_ids.size(1)}"
+        targets = targets.to(device)
+        context = context.to(device)
 
         optimizer.zero_grad()
 
-        # Forward pass
-        outputs = model(input_ids)
-        
-        # Ensure outputs shape is (batch_size * seq_len, num_classes)
-        outputs = outputs.view(-1, outputs.shape[-1])  # Flatten for cross-entropy
-        target_ids = target_ids.view(-1)  # Flatten target
+        for j in range(0, targets.shape[1] - 1):
+            inputs = targets[:, j:j+1]
+            labels = targets[:, j+1:j+2]
 
-        # Calculate loss)
-        loss = criterion(outputs, target_ids)
-        total_loss += loss.item()
+            prediction = model(context, inputs)
 
-        # Backpropagation
-        loss.backward()
+            n_total_loss_values += torch.sum(torch.where(labels != tokenizer.padding_idx_target, 1, 0))
+            labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
+            total_loss += criterion(prediction, labels)
+
+        total_loss /= n_total_loss_values
+        total_loss.backward()
         optimizer.step()
+        print(f"Batch {i+1}/{len(dataloader)} - Loss: {total_loss.item():.4f}")
 
-    return total_loss / len(dataloader)
+    return total_loss
 
-# Evaluation function
 def evaluate(model, dataloader, criterion, device):
     model.eval()
+
     total_loss = 0
-    with torch.no_grad():  # Disable gradient calculation for evaluation
-        for batch in dataloader:
-            inputs = batch["overview"]
-            targets = batch["report_short"]
-            
-            input_encodings = tokenizer.encode_plus_context(inputs)
-            target_encodings = tokenizer.encode_plus_target(targets)
-            
-            input_ids = input_encodings['input_ids'].to(device)
-            target_ids = target_encodings['input_ids'].to(device)
+    total_loss_values = 0
 
-            # Ensure lengths match
-            assert input_ids.size(1) == target_ids.size(1), f"Input length {input_ids.size(1)} != Target length {target_ids.size(1)}"
+    for i, batch in enumerate(dataloader):
+        context = batch["overview"]
+        targets = batch["report_short"]
 
-            # Forward pass
-            outputs = model(input_ids)
-            
-            # Reshape for loss calculation
-            outputs = outputs.view(-1, outputs.shape[-1])
-            target_ids = target_ids.view(-1)
+        for j in range(len(context)):
+            context[j] = torch.tensor(tokenizer.stoi_context(context[j])).unsqueeze(0)
+            targets[j] = torch.tensor(tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
 
-            # Calculate loss
-            loss = criterion(outputs, target_ids)
-            total_loss += loss.item()
+        targets = nn.utils.rnn.pad_sequence(targets, padding_value=tokenizer.padding_idx_target, batch_first=True)
+        context = torch.cat(context)
 
-    return total_loss / len(dataloader)
+        targets = targets.to(device)
+        context = context.to(device)
+
+        for j in range(0, targets.shape[1] - 1):
+            inputs = targets[:, j:j+1]
+            labels = targets[:, j+1:j+2]
+
+            prediction = model(context, inputs)
+
+            total_loss_values += torch.sum(torch.where(labels != tokenizer.padding_idx_target, 1, 0))
+            labels = labels.reshape(labels.shape[0] * labels.shape[1])
+            total_loss += criterion(prediction, labels)
+
+    return total_loss / total_loss_values
 
 # Hyperparameters
 embedding_dim = 256
@@ -146,26 +139,3 @@ for epoch in range(num_epochs):
     print(f"Eval Loss: {eval_loss:.4f}")
 
 print("Finished training.")
-
-# save model
-torch.save(model.state_dict(), 'weather_lstm.pth')
-
-# Load model
-#model.load_state_dict(torch.load('weather_lstm.pth'))
-
-# Let model predict
-input_text = "In Addis Abeba ist es am Morgen überwiegend dicht bewölkt und die Temperatur liegt bei 14°C. Im Laufe des Mittags kommt es zu Regenschauern und das Thermometer klettert auf 20°C. Abends ist es regnerisch bei Werten von 16 bis zu 17°C. Nachts sind anhaltende Regen-Schauer zu erwarten bei Tiefsttemperaturen von 14°C."
-input_encodings = tokenizer.encode_plus_context(input_text)
-input_ids = input_encodings['input_ids'].to(device)
-output = model(input_ids)
-
-# Apply argmax to get the predicted token IDs
-predicted_ids = torch.argmax(output, dim=-1)  # Get most probable token for each position
-
-# Flatten the predicted_ids tensor to a 1D list
-predicted_ids = predicted_ids.squeeze().cpu().numpy()  # Move to CPU and convert to numpy
-
-# Convert output token IDs to text
-output_text = tokenizer.itos_targets(predicted_ids)
-
-print(output_text)  # Print the predicted text
