@@ -33,21 +33,21 @@ def process_get_city_name(urls):
     return results
 
 # Load city data
-# cities = pd.read_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data.csv")
+cities = pd.read_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data.csv")
 
-# # Add Identifier column
-# cities["Identifier"] = cities["URL"].apply(lambda x: (str(x).split(".")[-2]).split("/")[-1])
+# Add Identifier column
+cities["Identifier"] = cities["URL"].apply(lambda x: (str(x).split(".")[-2]).split("/")[-1])
 
-# # Fetch city names using ThreadPoolExecutor
-# cities["True Name"] = process_get_city_name(cities["URL"].tolist())
+# Fetch city names using ThreadPoolExecutor
+cities["True Name"] = process_get_city_name(cities["URL"].tolist())
 
-# # Remove rows where 'True Name' is None
-# cleaned_cities = cities.dropna(subset=["True Name"]).reset_index(drop=True)
-
-
-cities = pd.read_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data_with_true_names.csv")
-cities.drop_duplicates(subset=["Identifier"])
+# Remove rows where 'True Name' is None
+cleaned_cities = cities.dropna(subset=["True Name"]).reset_index(drop=True)
 
 
-cities.to_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data_with_true_names.csv")
+# cities = pd.read_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data_with_true_names.csv")
+# cities = cities.drop_duplicates(subset=["Identifier"])
+# cities = cities.drop(columns = ["Unnamed: 0.1"])
+
+cities.to_csv(f"{os.getcwd()}/data/misc/crawled_information/city_data_with_true_names.csv", index=False)
 # print(cleaned_cities)
