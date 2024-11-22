@@ -26,6 +26,7 @@ class Generator:
         # Tokenizer
         self._tokenizer = DummyTokenizer(self._config["dataset"])
 
+    @torch.no_grad()
     def sample(self, model):
         model.eval()
 
