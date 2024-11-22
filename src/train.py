@@ -39,7 +39,7 @@ class Trainer:
             trg_pad_idx=self._tokenizer.padding_idx_target,
             emb_src_trg_weight_sharing=False,
             n_head=4,
-            n_layers=2,
+            n_layers=3,
             d_inner=512,
             d_model=256,
             d_word_vec=256
@@ -69,11 +69,12 @@ class Trainer:
         for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
-            print(f" [TRAINING] Epoch {epoch} / {self._config["epochs"]}")
+            print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
             self._train_epoch(epoch=epoch)
 
-            print(f" [EVALUATING] Epoch {epoch} / {self._config["epochs"]}")
+            print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
             eval_dict = self._evaluator.evaluate(self._model)
+            print(f"              Loss: {eval_dict['loss']}")
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
 
@@ -93,9 +94,9 @@ class Trainer:
             targets = batch["report_short"]
 
             # Tokenize
-            for i in range(len(context)):
-                context[i] = torch.tensor(self._tokenizer.stoi_context(context[i])).unsqueeze(0)
-                targets[i] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[i] + " <stop>"))
+            for j in range(len(context)):
+                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -116,9 +117,9 @@ class Trainer:
 
             total_loss = 0
             n_total_loss_values = 0
-            for i in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, i:i+self._config["block_size"]]
-                labels = targets[:, i+1:i+1+self._config["block_size"]]
+            for j in range(0, targets.shape[1] - self._config["block_size"]):
+                inputs = targets[:, j:j+self._config["block_size"]]
+                labels = targets[:, j+1:j+1+self._config["block_size"]]
 
                 prediction = self._model(context, inputs)
                 
@@ -132,7 +133,7 @@ class Trainer:
 
             self._optimizer.step()
             
-            self._writer.add_scalar("train/loss", total_loss.item(), epoch * (i + 1))
+            self._writer.add_scalar("train/loss", total_loss.item(), (epoch-1) * len(self._train_dataloader) + i)
 
 
 
@@ -155,7 +156,7 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 5,
-        "epochs": 10,
+        "epochs": 20,
         "block_size": 20
     }
 

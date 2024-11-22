@@ -30,13 +30,13 @@ class Generator:
         model.eval()
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
-            context = batch["overview"]
+            context = batch["overview"].copy()
             targets = batch["report_short"].copy()
 
             # Tokenize
-            for i in range(len(context)):
-                context[i] = torch.tensor(self._tokenizer.stoi_context(context[i])).unsqueeze(0)
-                targets[i] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[i] + " <stop>"))
+            for j in range(len(context)):
+                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
 
             context = context[0]
             targets = targets[0]
@@ -48,9 +48,10 @@ class Generator:
             running_input = torch.zeros(size=(1, self._config["block_size"] + 1), dtype=targets.dtype).to(DEVICE)
             running_input[0, 0] = self._tokenizer.start_idx_target
             token_sequence = []
-            i = 0
+
             j = 0
-            while running_input[0, -2] != self._tokenizer.stop_idx_target and i < 200:
+            k = 0
+            while running_input[0, -2] != self._tokenizer.stop_idx_target and k < 200:
                 prediction = model(context, running_input[:, :self._config["block_size"]])
 
                 if j < self._config["block_size"]:
@@ -69,10 +70,11 @@ class Generator:
                     running_input[0, -1] = next_token
                     running_input = torch.roll(running_input, -1, dims=1)
                 
-                i += 1
+                k += 1
             
             print(f"Target: {batch['report_short'][0]}")
-            print(f"Predic: {self._tokenizer.itos_targets(token_sequence)}")
+            print(f"Overview: {batch['overview'][0]}")
+            print(f"Predic: {self._tokenizer.itos_targets(token_sequence).replace('<city>', batch['city'][0])}")
 
             exit()
 
