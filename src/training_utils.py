@@ -32,6 +32,9 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device):
     for batch in dataloader:
         context, targets = prepare_batch(batch, tokenizer, device)
 
+        # Reset hidden state for each batch
+        hidden_state = None
+
         optimizer.zero_grad()
         loss = 0
 
@@ -39,7 +42,9 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device):
             inputs = targets[:, t:t+1]
             labels = targets[:, t+1:t+2]
 
-            predictions = model(context, inputs)
+            predictions, hidden_state = model(context, inputs, hidden_state) # use reset hidden state
+            hidden_state = (hidden_state[0].detach(), hidden_state[1].detach()) # detach hidden state from computation graph
+
             loss += criterion(predictions.view(-1, predictions.size(-1)), labels.view(-1))
 
         loss.backward()

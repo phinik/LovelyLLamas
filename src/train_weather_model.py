@@ -9,9 +9,10 @@ from training_utils import train, evaluate
 
 # Paths and parameters
 DATASET_PATH = 'C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset'
-BATCH_SIZE = 32
-EMBEDDING_DIM = 256
-HIDDEN_DIM = 512
+#DATASET_PATH = 'C:/Users/Niels/Desktop/Uni/WS25/Master-Projekt/debug_dataset'
+BATCH_SIZE = 8
+EMBEDDING_DIM = 64 #128
+HIDDEN_DIM = 128 #256
 LEARNING_RATE = 0.001
 NUM_EPOCHS = 20
 MODEL_PATH = "weather_lstm.pth"
@@ -35,7 +36,8 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 criterion = nn.CrossEntropyLoss()
 
 # Training Loop
-print("Training started...")
+print("Training started on model with on " + str(NUM_EPOCHS) + " epochs.")
+print("Parameters: " + str(model.num_parameters()))
 for epoch in range(NUM_EPOCHS):
     train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device)
     eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device)
