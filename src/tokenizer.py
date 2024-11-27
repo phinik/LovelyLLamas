@@ -5,103 +5,66 @@ from typing import List
 
 
 class Tokenizer:
+    """Tokenizer for encoding text data using a pre-trained BERT model with custom tokens."""
     def __init__(self, dataset_path: str, model_name: str = "bert-base-german-cased"):
-        """
-        Initializes the tokenizer using a pre-trained BERT model for German.
-        :param model_name: Name of the pre-trained BERT model.
-        """
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self._dataset_path = dataset_path
 
+        # Initialize vocabularies
         self._target_tokens = list(self.tokenizer.get_vocab().keys())
         self._context_tokens = list(self.tokenizer.get_vocab().keys())
 
-        custom_tokens = ["<start>", "<stop>", "<padding>", "degC", "l_per_sqm", "kmh", "percent"]
-        self._target_tokens += custom_tokens
+        # Add custom tokens
+        self.add_custom_tokens()
 
-        self._stoi_targets = {token: i for i, token in enumerate(self._target_tokens)}
-        self._stoi_context = {token: i for i, token in enumerate(self._context_tokens)}
+    def add_custom_tokens(self, custom_tokens: List[str] = None):
+        num_added_tokens = self.tokenizer.add_tokens(custom_tokens)
+        self.custom_tokens = custom_tokens or []
 
-        # Rebuild the dictionaries for custom tokens
-        for idx, token in enumerate(custom_tokens, len(self.tokenizer.get_vocab())):
-            self._stoi_targets[token] = idx
-            self._stoi_context[token] = idx
-
-        # Invert the dictionaries
-        self._itos_targets = {i: token for token, i in self._stoi_targets.items()}
-        self._itos_context = {i: token for token, i in self._stoi_targets.items()}
-
-        # Special token IDs
-        self._padding_idx = self.tokenizer.pad_token_id
-        self._start_idx = self.tokenizer.cls_token_id
-        self._stop_idx = self.tokenizer.sep_token_id
-
-    def add_custom_tokens(self, tokens: List[str]):
-        """
-        Adds custom tokens to the tokenizer.
-        :param tokens: List of custom tokens.
-        """
-        num_added_tokens = self.tokenizer.add_tokens(tokens)
         if num_added_tokens > 0:
-            size_vocab = self.tokenizer.vocab_size
             print(f"Added {num_added_tokens} tokens to the tokenizer and resized embeddings.")
 
-    def _load_tokens(self, filename: str) -> List:
-        with open(os.path.join(self._dataset_path, filename), "r") as f:
-            return json.load(f)
+        # Update vocabularies with custom tokens
+        vocab_size = len(self.tokenizer)
+        self._stoi_targets = {token: i for i, token in enumerate(self._target_tokens + self.custom_tokens)}
+        self._stoi_context = {token: i for i, token in enumerate(self._context_tokens + self.custom_tokens)}
+        self._itos_targets = {i: token for token, i in self._stoi_targets.items()}
+        self._itos_context = {i: token for token, i in self._stoi_context.items()}
 
+    def encode(self, text: str, max_length: int = 512) -> List[int]:
+        """Encodes text into input IDs with padding."""
+        encoding = self.tokenizer.encode_plus(text, padding="max_length", max_length=max_length, return_tensors="pt")
+        return encoding["input_ids"].squeeze(0).tolist()
+    
+    def decode(self, input_ids: List[int]) -> str:
+        """Decodes input IDs back into text."""
+        return self.tokenizer.decode(input_ids, skip_special_tokens=True)
+    
+    def save_tokenizer(self, path: str):
+        """Saves the tokenizer configuration and vocabulary."""
+        self.tokenizer.save_pretrained(path)
+
+    def load_tokens(self, filename: str) -> List:
+        """Loads tokens from a JSON file."""
+        file_path = os.path.join(self._dataset_path, filename)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Token file not found: {file_path}")
+        with open(file_path, "r") as f:
+            return json.load(f)
+        
+    # Properties for special token indices
     @property
-    def padding_idx_context(self) -> int:
-        return self._stoi_context["<padding>"]
+    def padding_idx(self) -> int:
+        return self.tokenizer.convert_tokens_to_ids("<pad>")
     
     @property
-    def padding_idx_target(self) -> int:
-        return self._stoi_targets["<padding>"]
+    def start_idx(self) -> int:
+        return self.tokenizer.convert_tokens_to_ids("<start>")
         
     @property
-    def start_idx_target(self) -> int:
-        return self._stoi_targets["<start>"]
+    def stop_idx(self) -> int:
+        return self.tokenizer.convert_tokens_to_ids("<stop>")
     
     @property
-    def stop_idx_target(self) -> int:
-        return self._stoi_targets["<stop>"]
-    
-    @property
-    def size_context_vocab(self) -> int:
-        return max(self._stoi_context.values()) + 1
-    
-    @property
-    def size_target_vocab(self) -> int:
-        return max(self._stoi_targets.values()) + 1
-
-    def stoi_targets(self, token: str) -> int:
-        """
-        Maps a target token to its corresponding index.
-        :param token: Token to map.
-        :return: Corresponding index or raises KeyError if token is not found.
-        """
-        return self._stoi_targets.get(token, None)
-
-    def stoi_context(self, token: str) -> int:
-        """
-        Maps a context token to its corresponding index.
-        :param token: Token to map.
-        :return: Corresponding index or raises KeyError if token is not found.
-        """
-        return self._stoi_context.get(token, None)
-
-    def itos_targets(self, idx: int) -> str:
-        """
-        Maps a target index to its corresponding token.
-        :param idx: Index to map.
-        :return: Corresponding token or raises KeyError if index is not found.
-        """
-        return self._itos_targets.get(idx, None)
-
-    def itos_context(self, idx: int) -> str:
-        """
-        Maps a context index to its corresponding token.
-        :param idx: Index to map.
-        :return: Corresponding token or raises KeyError if index is not found.
-        """
-        return self._itos_context.get(idx, None)
+    def vocab_size(self) -> int:
+        return len(self.tokenizer)
