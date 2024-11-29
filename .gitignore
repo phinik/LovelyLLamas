@@ -40,3 +40,6 @@ ENV/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Models
+*.pth

@@ -72,7 +72,7 @@ def generate_weather_report(model, tokenizer, text, device):
     print("Tokenized Input IDs:", tokenized_text)
 
     with torch.no_grad():
-        prediction = model(tokenized_text, tokenized_text)
+        prediction, _ = model(tokenized_text, tokenized_text)
         prediction_ids = prediction.argmax(dim=-1).squeeze(0).cpu().numpy()
 
     # Decode the prediction into text
@@ -88,16 +88,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load tokenizer and model
 tokenizer = Tokenizer(dataset_path='C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset')
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>, <city>'])
+tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>'])
 
 # Ensure consistency with training tokenizer state
 tokenizer_vocab_size = tokenizer.vocab_size
 
 model = load_model(
-    model_path="weather_lstm.pth",
+    model_path="best_model_loss.pth",
     vocab_size=tokenizer_vocab_size,
-    embedding_dim=256,
-    hidden_dim=512,
+    embedding_dim=64,
+    hidden_dim=128,
     output_dim=tokenizer_vocab_size,
     device=device
 )

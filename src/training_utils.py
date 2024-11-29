@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-
 def prepare_batch(batch, tokenizer, device):
     """
     Prepares tokenized context and target data for training or evaluation.
@@ -25,7 +24,7 @@ def prepare_batch(batch, tokenizer, device):
 
     return padded_context.to(device), padded_targets.to(device)
 
-def train(model, dataloader, tokenizer, optimizer, criterion, device):
+def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0):
     model.train()
     total_loss = 0
 
@@ -36,18 +35,24 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device):
         hidden_state = None
 
         optimizer.zero_grad()
+        
         loss = 0
 
         for t in range(targets.shape[1] - 1):
             inputs = targets[:, t:t+1]
             labels = targets[:, t+1:t+2]
 
-            predictions, hidden_state = model(context, inputs, hidden_state) # use reset hidden state
-            hidden_state = (hidden_state[0].detach(), hidden_state[1].detach()) # detach hidden state from computation graph
+            predictions, hidden_state = model(context, inputs, hidden_state) 
+            hidden_state = (hidden_state[0].detach(), hidden_state[1].detach()) 
 
             loss += criterion(predictions.view(-1, predictions.size(-1)), labels.view(-1))
 
+        loss = loss / (targets.shape[1] - 1)
         loss.backward()
+
+        # Apply gradient clipping
+        torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clip)
+
         optimizer.step()
         total_loss += loss.item()
 
@@ -60,15 +65,18 @@ def evaluate(model, dataloader, tokenizer, criterion, device):
     with torch.no_grad():
         for batch in dataloader:
             context, targets = prepare_batch(batch, tokenizer, device)
+
+            hidden_state = None
+
             loss = 0
 
             for t in range(targets.shape[1] - 1):
                 inputs = targets[:, t:t+1]
                 labels = targets[:, t+1:t+2]
 
-                predictions = model(context, inputs)
+                predictions, hidden_state = model(context, inputs, hidden_state)
+                hidden_state = (hidden_state[0].detach(), hidden_state[1].detach())
                 loss += criterion(predictions.view(-1, predictions.size(-1)), labels.view(-1))
 
             total_loss += loss.item()
-
     return total_loss / len(dataloader)

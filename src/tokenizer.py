@@ -6,7 +6,7 @@ from typing import List
 
 class Tokenizer:
     """Tokenizer for encoding text data using a pre-trained BERT model with custom tokens."""
-    def __init__(self, dataset_path: str, model_name: str = "bert-base-german-cased"):
+    def __init__(self, dataset_path: str, model_name: str = "bert-base-german-cased", custom_tokens: List[str] = None):
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self._dataset_path = dataset_path
 
@@ -15,7 +15,7 @@ class Tokenizer:
         self._context_tokens = list(self.tokenizer.get_vocab().keys())
 
         # Add custom tokens
-        self.add_custom_tokens()
+        self.add_custom_tokens(custom_tokens=custom_tokens)
 
     def add_custom_tokens(self, custom_tokens: List[str] = None):
         num_added_tokens = self.tokenizer.add_tokens(custom_tokens)
