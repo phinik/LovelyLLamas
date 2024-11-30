@@ -10,11 +10,14 @@ def contains_data(path: str, filename: str) -> bool:
     with open(os.path.join(path, filename), 'r') as f:
         data = json.load(f)
 
-    required_keys = ["city", "created_day", "report_short", "report_long", "overview"]
+    required_keys = ["city", "created_day", "report_short", "report_long", "times"]
 
     for key in required_keys:
         if data[key] is None:
             return False
+        
+    if len(data["times"]) != 24:
+        return False
         
     return True
 
@@ -38,8 +41,12 @@ def load_filenames(path: str) -> List[str]:
 
     return filenames_all
 
-def create_splits(filenames: List[str], train_split: float, eval_split: float) -> Dict:
+def create_splits(filenames: List[str], train_split: float, eval_split: float, size: int) -> Dict:
     random.shuffle(filenames)
+
+    # Constrain the size of the dataset to be at most "size"
+    if size != -1 and len(filenames) > size:
+        filenames = filenames[:size]
 
     # Determine number of files per split
     n_train = int(len(filenames) * train_split)
@@ -77,6 +84,7 @@ if __name__ == "__main__":
     parser.add_argument("destination_directory", type=str, help="Path to directory where the splits will be stored")
     parser.add_argument("--train_split", type=float, default=0.7, help="Wanted fraction of data for training")
     parser.add_argument("--eval_split", type=float, default=0.2, help="Wanted fraction of data for evaluation")
+    parser.add_argument("--size", type=int, default=-1, help="Number of files to consider for creating the dataset. If -1, all files will be considered.")
 
     args = parser.parse_args()
 
@@ -90,7 +98,8 @@ if __name__ == "__main__":
     splits = create_splits(
         filenames=filenames,
         train_split=args.train_split,
-        eval_split=args.eval_split
+        eval_split=args.eval_split,
+        size=args.size
     )
 
     print(80*'-')

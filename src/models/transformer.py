@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import os
+
+import json
 
 
 # Taken from https://github.com/jadore801120/attention-is-all-you-need-pytorch/tree/master/transformer (08 Nov. 2024)
@@ -18,6 +23,25 @@ class Transformer(nn.Module):
             scale_emb_or_prj='prj'):
 
         super().__init__()
+
+        self._params_dict = {
+            "n_src_vocab": n_src_vocab,
+            "n_trg_vocab": n_trg_vocab,
+            "src_pad_idx": src_pad_idx,
+            "trg_pad_idx": trg_pad_idx,
+            "d_word_vec": d_word_vec,
+            "d_model": d_model,
+            "d_inner": d_inner,
+            "n_layers": n_layers,
+            "n_head": n_head,
+            "d_k": d_k,
+            "d_v": d_v,
+            "dropout": dropout,
+            "n_position": n_position,
+            "trg_emb_prj_weight_sharing": trg_emb_prj_weight_sharing,
+            "emb_src_trg_weight_sharing": emb_src_trg_weight_sharing,
+            "scale_emb_or_prj": scale_emb_or_prj
+        }
 
         self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
 
@@ -67,7 +91,6 @@ class Transformer(nn.Module):
 
 
     def forward(self, src_seq, trg_seq):
-
         src_mask = get_pad_mask(src_seq, self.src_pad_idx)
         trg_mask = get_pad_mask(trg_seq, self.trg_pad_idx) & get_subsequent_mask(trg_seq)
 
@@ -79,11 +102,22 @@ class Transformer(nn.Module):
 
         return seq_logit.view(-1, seq_logit.size(2))
     
-    def save_as(self, path: str):
-        torch.save(self.state_dict(), path)
+    def save_weights_as(self, dir: str, filename: str):
+        torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
-    def load_from(self, path: str):
-        self.load_state_dict(torch.load(path))
+    def load_weights_from(self, path: str):
+        self.load_state_dict(torch.load(path, weights_only=True))
+
+    def save_params_to(self, dir: str):
+        with open(os.path.join(dir, "params.json"), "w") as f:
+            json.dump(self._params_dict, f, sort_keys=True, indent=4)
+
+    @staticmethod
+    def from_params(path: str) -> Transformer:
+        with open(path, 'r') as f:
+            params = json.load(f)
+
+        return Transformer(**params)
 
 
 def get_pad_mask(seq, pad_idx):
@@ -256,6 +290,8 @@ class MultiHeadAttention(nn.Module):
         sz_b, len_q, len_k, len_v = q.size(0), q.size(1), k.size(1), v.size(1)
 
         residual = q
+        
+        q = self.layer_norm(q)       
 
         # Pass through the pre-attention projection: b x lq x (n*dv)
         # Separate different heads: b x lq x n x dv
@@ -277,8 +313,6 @@ class MultiHeadAttention(nn.Module):
         q = self.dropout(self.fc(q))
         q += residual
 
-        q = self.layer_norm(q)
-
         return q, attn
 
 
@@ -292,14 +326,13 @@ class PositionwiseFeedForward(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-
         residual = x
+
+        x = self.layer_norm(x)
 
         x = self.w_2(F.relu(self.w_1(x)))
         x = self.dropout(x)
         x += residual
-
-        x = self.layer_norm(x)
 
         return x
     

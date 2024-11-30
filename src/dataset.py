@@ -59,7 +59,7 @@ class WeatherDataset(Dataset):
             data = self._load_data_from_file(file)
             data = self._transforms(data)
             cached_data.append(data)
-
+            
         return cached_data
 
     def _load_data_from_file(self, filename: str) -> Dict:
@@ -69,11 +69,3 @@ class WeatherDataset(Dataset):
             data = json.load(f)
 
         return data
-    
-    def _apply_transforms(self, data: Dict) -> Dict:
-        for transform in self._transforms:
-            data = transform(data)
-
-        return data
-
-

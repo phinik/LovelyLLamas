@@ -49,4 +49,4 @@ def get_test_dataloader_weather_dataset(path: str, batch_size: int, cached: bool
         cached=cached
     )
 
-    return DataLoader(dset, batch_size=batch_size, shuffle=False)
+    return DataLoader(dset, batch_size=batch_size, shuffle=True)
