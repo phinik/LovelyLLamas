@@ -210,6 +210,7 @@ class Decoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.scale_emb = scale_emb
         self.d_model = d_model
+        self._final_layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
     def forward(self, trg_seq, trg_mask, enc_output, src_mask, return_attns=False):
         dec_slf_attn_list, dec_enc_attn_list = [], []
@@ -226,6 +227,8 @@ class Decoder(nn.Module):
                 dec_output, enc_output, slf_attn_mask=trg_mask, dec_enc_attn_mask=src_mask)
             dec_slf_attn_list += [dec_slf_attn] if return_attns else []
             dec_enc_attn_list += [dec_enc_attn] if return_attns else []
+
+        dec_output = self._final_layer_norm(dec_output)
 
         if return_attns:
             return dec_output, dec_slf_attn_list, dec_enc_attn_list
