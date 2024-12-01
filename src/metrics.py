@@ -27,6 +27,90 @@ class IMetric(ABC):
         pass
 
 
+class Rouge(IMetric):
+    def __init__(self):
+        self._scorer = load("rouge")
+        
+        self._scores_rouge_1 = []  # Rouge-1
+        self._scores_rouge_2 = []  # Rouge-2
+        self._scores_rouge_l = []  # Rouge-L
+
+    @property
+    def name(self) -> str:
+        return "ROUGE"
+    
+    def get(self) -> float:
+        return {
+            "mean_rouge_1": np.mean(self._scores_rouge_1),
+            "mean_rouge_2": np.mean(self._scores_rouge_2),
+            "mean_rouge_L": np.mean(self._scores_rouge_l),
+        }
+
+    def reset(self) -> None:
+        self._scores_rouge_1 = []
+        self._scores_rouge_2 = []
+        self._scores_rouge_l = []
+
+    def update(self, prediction: str, label: str) -> None:
+        # TODO: move into postprocessing       
+        prediction = prediction.replace(".", "")
+        prediction = prediction.replace(",", "")
+        prediction = prediction.replace("!", "")
+        prediction = prediction.replace("<stop>", "")
+        prediction = prediction.replace("  ", " ")
+        prediction = prediction.strip()
+
+        label = label.replace(".", "")
+        label = label.replace(",", "")
+        label = label.replace("!", "")
+        label = label.replace("  ", " ")
+        label = label.strip()
+    
+        scores = self._scorer.compute(predictions=[prediction], references=[label])
+
+        self._scores_rouge_1.append(scores["rouge1"])
+        self._scores_rouge_2.append(scores["rouge2"])
+        self._scores_rouge_l.append(scores["rougeL"])
+
+
+class Bleu(IMetric):
+    def __init__(self):
+        self._scorer = load("bleu")
+        
+        self._scores = []  # BLEU score
+
+    @property
+    def name(self) -> str:
+        return "BLEU"
+    
+    def get(self) -> float:
+        return {
+            "mean_bleu": np.mean(self._scores),
+        }
+
+    def reset(self) -> None:
+        self._scores = []
+
+    def update(self, prediction: str, label: str) -> None:
+        # TODO: move into postprocessing       
+        prediction = prediction.replace(".", "")
+        prediction = prediction.replace(",", "")
+        prediction = prediction.replace("!", "")
+        prediction = prediction.replace("<stop>", "")
+        prediction = prediction.replace("  ", " ")
+        prediction = prediction.strip()
+
+        label = label.replace(".", "")
+        label = label.replace(",", "")
+        label = label.replace("!", "")
+        label = label.replace("  ", " ")
+        label = label.strip()
+    
+        scores = self._scorer.compute(predictions=[prediction], references=[label])
+
+        self._scores.append(scores["bleu"])  
+
+
 class BertScore(IMetric):
     def __init__(self, dataset: str):
         self._scorer = load("bertscore")
