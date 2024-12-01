@@ -1,4 +1,5 @@
 import argparse
+import json
 import tqdm
 import torch
 import os
@@ -9,7 +10,7 @@ from src.dataloader import *
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
-from src.metrics import IMetric, BertScore
+from src.metrics import IMetric, BertScore, Bleu, Rouge
 import src.determinism
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -98,7 +99,7 @@ if __name__ == "__main__":
     #parser.add_argument("--model_params", type=str, help="Which model params to use")
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    parser.add_argument("--metrics", nargs="+", choices=["bertscore"], type=str, help="", required=True)
+    parser.add_argument("--metrics", nargs="+", choices=["bertscore", "bleu", "rouge"], type=str, help="", required=True)
     
     args = parser.parse_args()
     
@@ -120,8 +121,15 @@ if __name__ == "__main__":
     for metric in args.metrics:
         if metric == "bertscore":
             metrics.append(BertScore(config["dataset"]))
+        if metric == "bleu":
+            metrics.append(Bleu())
+        if metric == "rouge":
+            metrics.append(Rouge())
 
     generator = Evaluator(config, metrics=metrics)
     results = generator.evaluate(model)
 
-    print(results)
+    out_dir = os.path.dirname(config["model_weights"])
+    filename = f"eval_{os.path.splitext(os.path.split(config['model_weights'])[1])[0]}.json"
+    with open(os.path.join(out_dir, filename), "w") as f:
+        json.dump(results, f, indent=4)
