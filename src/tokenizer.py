@@ -31,9 +31,9 @@ class Tokenizer:
         self._itos_targets = {i: token for token, i in self._stoi_targets.items()}
         self._itos_context = {i: token for token, i in self._stoi_context.items()}
 
-    def encode(self, text: str, max_length: int = 512) -> List[int]:
+    def encode(self, text: str, truncation: bool = False, max_length: int = 512) -> List[int]:
         """Encodes text into input IDs with padding."""
-        encoding = self.tokenizer.encode_plus(text, padding="max_length", max_length=max_length, return_tensors="pt")
+        encoding = self.tokenizer.encode_plus(text, truncation=truncation, max_length=max_length, return_tensors="pt")
         return encoding["input_ids"].squeeze(0).tolist()
     
     def decode(self, input_ids: List[int]) -> str:

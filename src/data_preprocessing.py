@@ -68,10 +68,12 @@ class AssembleCustomOverview:
                 data["niederschlagsrisiko_in_perc"], data["niederschlagsmenge_in_l_per_sqm"],
                 data["windrichtung"], data["windgeschwindigkeit_in_km_per_s"], data["bewölkungsgrad"]):
 
+            #time = time[:-4]
+            #time = time.replace(" ", "")
             clearness = clearness.replace(",", "")  # remove problematic commas
             overview.append(f"{time},{clearness},{temp},{rain_risk},{rain_amount},{wind_dir},{wind_speed},{cloudiness}")
 
-        data["overview"] = ",".join(overview)
+        data["overview"] = ";".join(overview)
         return data
 
 

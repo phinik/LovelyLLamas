@@ -11,7 +11,7 @@ from training_utils import train, evaluate
 # Paths and parameters
 DATASET_PATH = 'C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2'
 #DATASET_PATH = 'C:/Users/Niels/Desktop/Uni/WS25/Master-Projekt/debug_dataset'
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 EMBEDDING_DIM = 64 #128
 HIDDEN_DIM = 128 #256
 LEARNING_RATE = 0.005
@@ -24,7 +24,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load tokenizer
 tokenizer = Tokenizer(DATASET_PATH)
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>'])
+tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>', '<kmh>', '<percent>'])
 
 # Create DataLoaders
 train_dataloader = get_train_dataloader_weather_dataset(DATASET_PATH, BATCH_SIZE, cached=True)
@@ -33,7 +33,7 @@ eval_dataloader = get_eval_dataloader_weather_dataset(DATASET_PATH, BATCH_SIZE, 
 # Initialize model
 vocab_size = tokenizer.vocab_size
 output_dim = vocab_size
-model = LSTM(vocab_size, EMBEDDING_DIM, HIDDEN_DIM, output_dim).to(device)
+model = LSTM(vocab_size, EMBEDDING_DIM, HIDDEN_DIM, output_dim, bidirectional=True).to(device)
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 criterion = criterion = nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=tokenizer.padding_idx)
 
@@ -42,7 +42,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0
 
 # Load weights if available
 try:
-    model.load_state_dict(torch.load("checkpoint.pth"))
+    model.load_state_dict(torch.load("checkpoint.pth", weights_only=True))
     print("Loaded model weights.")
 except FileNotFoundError:
     print("No model weights found.")
@@ -59,8 +59,8 @@ best_loss = float('inf')
 print(f"Training started on model with {NUM_EPOCHS} epochs.")
 print(f"Parameters: {model.num_parameters()}")
 for epoch in range(NUM_EPOCHS):
-    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0)
-    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device)
+    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0, reset_hidden=True)
+    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device, reset_hidden=True)
 
     scheduler.step(eval_loss)
 

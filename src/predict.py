@@ -45,18 +45,16 @@ def preprocess_input(text: str = None, city_name: str = None, json_path: str = N
         }
 
     preprocessed_data = pipeline(input_data)
-    # Debugging Step: Print the preprocessed text
-    print("Preprocessed Text:", preprocessed_data["overview"])
     return "<start> " + preprocessed_data["overview"] + " <stop>"
 
 
 
-def load_model(model_path, vocab_size, embedding_dim, hidden_dim, output_dim, device):
+def load_model(model_path, vocab_size, embedding_dim, hidden_dim, output_dim, device, bidirectional=False):
     """
     Load the trained WeatherLSTM model.
     """
-    model = LSTM(vocab_size, embedding_dim, hidden_dim, output_dim).to(device)
-    model.load_state_dict(torch.load(model_path))
+    model = LSTM(vocab_size, embedding_dim, hidden_dim, output_dim, bidirectional=bidirectional).to(device)
+    model.load_state_dict(torch.load(model_path, weights_only=True))
     model.eval()
     return model
 
@@ -68,18 +66,13 @@ def generate_weather_report(model, tokenizer, text, device):
     # Encode the preprocessed text
     tokenized_text = torch.tensor(tokenizer.encode(text)).unsqueeze(0).to(device)
 
-    # Debugging Step: Print tokenized input
-    print("Tokenized Input IDs:", tokenized_text)
-
     with torch.no_grad():
-        prediction, _ = model(tokenized_text, tokenized_text)
+        prediction, _ = model.predict(tokenized_text)
         prediction_ids = prediction.argmax(dim=-1).squeeze(0).cpu().numpy()
 
     # Decode the prediction into text
     decoded_prediction = tokenizer.decode(prediction_ids)
 
-    # Debugging Step: Print decoded prediction
-    print("Decoded Prediction:", decoded_prediction)
     return decoded_prediction
 
 
@@ -88,7 +81,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load tokenizer and model
 tokenizer = Tokenizer(dataset_path='C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset')
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>'])
+tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>', '<kmh>', '<percent>'])
 
 # Ensure consistency with training tokenizer state
 tokenizer_vocab_size = tokenizer.vocab_size
@@ -99,11 +92,12 @@ model = load_model(
     embedding_dim=64,
     hidden_dim=128,
     output_dim=tokenizer_vocab_size,
-    device=device
+    device=device,
+    bidirectional=True
 )
 
 # Input text or JSON file path
-json_file_path = "C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset/train/2024-11-01_Addis Ababa_standardised.json"  # Set to None if not using JSON
+json_file_path = "C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2/train/2024-11-19_aachen-DE0000003_standardised.json"  # Set to None if not using JSON
 raw_text = None  # Set to your input text if not using JSON
 city_name = None  # Set to your city name if using text input
 
