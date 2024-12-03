@@ -47,9 +47,9 @@ def prepare_batch(batch, tokenizer, device, max_length=512):
     packed_context = nn.utils.rnn.pack_padded_sequence(padded_context, sorted_context_lengths, batch_first=True, enforce_sorted=True)
 
     padded_targets = nn.utils.rnn.pad_sequence(sorted_targets, batch_first=True, padding_value=tokenizer.padding_idx)
-    packed_targets = nn.utils.rnn.pack_padded_sequence(padded_targets, sorted_context_lengths, batch_first=True, enforce_sorted=False)
+    packed_targets = nn.utils.rnn.pack_padded_sequence(padded_targets, sorted_target_lengths, batch_first=True, enforce_sorted=False)
     
-    return packed_context.to(device), packed_targets.to(device)
+    return packed_context.to(device), packed_targets.to(device), target_lengths
 
 def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0):
     model.train()
@@ -57,14 +57,16 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_c
 
     with tqdm(total=len(dataloader), desc="Training", unit="batch") as pbar:
         for batch in dataloader:
-            packed_context, packed_targets = prepare_batch(batch, tokenizer, device)
+            packed_context, packed_targets, target_lengths = prepare_batch(batch, tokenizer, device)
 
             optimizer.zero_grad()
 
             loss = 0
 
             predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
-            flattened_predictions = predictions.view(-1, predictions.shape[2]) # [batch_size * max_seq_length, vocab_size]
+            predictions = predictions[:, :max(target_lengths)] # truncate predictions to target length
+
+            flattened_predictions = predictions.reshape(-1, predictions.size(-1)) # [batch_size * max_seq_length, vocab_size]
             flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
 
             loss = criterion(flattened_predictions, flattened_targets)
@@ -89,12 +91,14 @@ def evaluate(model, dataloader, tokenizer, criterion, device):
     with tqdm(total=len(dataloader), desc="Evaluating", unit="batch") as pbar:
         with torch.no_grad():
             for batch in dataloader:
-                packed_context, packed_targets = prepare_batch(batch, tokenizer, device)
+                packed_context, packed_targets, target_lengths = prepare_batch(batch, tokenizer, device)
 
                 loss = 0
 
                 predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
-                flattened_predictions = predictions.view(-1, predictions.shape[2]) # [batch_size * max_seq_length, vocab_size]
+                predictions = predictions[:, :max(target_lengths)] # truncate predictions to target length
+
+                flattened_predictions = predictions.reshape(-1, predictions.size(-1)) # [batch_size * max_seq_length, vocab_size]
                 flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
 
                 loss = criterion(flattened_predictions, flattened_targets)
