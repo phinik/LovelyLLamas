@@ -1,13 +1,17 @@
 import json
 import os
 from transformers import BertTokenizer
+from transformers import AutoTokenizer
 from typing import List
 
 
 class Tokenizer:
     """Tokenizer for encoding text data using a pre-trained BERT model with custom tokens."""
     def __init__(self, dataset_path: str, model_name: str = "bert-base-german-cased", custom_tokens: List[str] = None):
-        self.tokenizer = BertTokenizer.from_pretrained(model_name)
+        if model_name == "bert-base-german-cased":
+            self.tokenizer = BertTokenizer.from_pretrained(model_name)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._dataset_path = dataset_path
 
         # Initialize vocabularies
@@ -34,6 +38,7 @@ class Tokenizer:
     def encode(self, text: str, truncation: bool = False, max_length: int = 512) -> List[int]:
         """Encodes text into input IDs with padding."""
         encoding = self.tokenizer.encode_plus(text, truncation=truncation, max_length=max_length, return_tensors="pt")
+
         return encoding["input_ids"].squeeze(0).tolist()
     
     def decode(self, input_ids: List[int]) -> str:
@@ -55,7 +60,7 @@ class Tokenizer:
     # Properties for special token indices
     @property
     def padding_idx(self) -> int:
-        return self.tokenizer.convert_tokens_to_ids("<pad>")
+        return self.tokenizer.pad_token_id
     
     @property
     def start_idx(self) -> int:

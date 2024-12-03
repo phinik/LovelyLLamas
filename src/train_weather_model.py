@@ -12,8 +12,8 @@ from training_utils import train, evaluate
 DATASET_PATH = 'C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2'
 #DATASET_PATH = 'C:/Users/Niels/Desktop/Uni/WS25/Master-Projekt/debug_dataset'
 BATCH_SIZE = 16
-EMBEDDING_DIM = 32 #128
-HIDDEN_DIM = 64 #256
+EMBEDDING_DIM = 16 #128
+HIDDEN_DIM = 32 #256
 LEARNING_RATE = 0.005
 NUM_EPOCHS = 300
 GRADIENT_CLIP = 1.0
@@ -23,8 +23,8 @@ MODEL_PATH = "weather_lstm.pth"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load tokenizer
-tokenizer = Tokenizer(DATASET_PATH)
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>', '<kmh>', '<percent>'])
+tokenizer = Tokenizer(DATASET_PATH, model_name="distilbert-base-german-cased")
+tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
 
 # Create DataLoaders
 train_dataloader = get_train_dataloader_weather_dataset(DATASET_PATH, BATCH_SIZE, cached=True)

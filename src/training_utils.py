@@ -34,31 +34,20 @@ def prepare_batch(batch, tokenizer, device, max_length=512):
     Prepares tokenized context and target data for training or evaluation using PackedSequence.
     Handles sequences longer than max_length by splitting into chunks.
     """
-    context = batch["overview"]
-    targets = batch["report_short"]
+    tokenized_context = [torch.tensor(tokenizer.encode(text)) for text in batch["overview"]]
+    tokenized_targets = [torch.tensor(tokenizer.encode("<start> " + text + " <stop>")) for text in batch["report_short"]]
 
-    tokenized_context = []
-    tokenized_targets = []
-    context_lengths = []
+    context_lengths = [len(seq) for seq in tokenized_context]
+    target_lengths = [len(seq) for seq in tokenized_targets]
 
-    for i in range(len(context)):
-        tokenized_ctx = torch.tensor(tokenizer.encode(context[i]))
-        tokenized_tgt = torch.tensor(tokenizer.encode("<start> " + targets[i] + " <stop>"))
+    data = sorted(zip(tokenized_context, tokenized_targets, context_lengths, target_lengths), key=lambda x: -x[2])
+    sorted_context, sorted_targets, sorted_context_lengths, sorted_target_lengths = zip(*data)
 
-        tokenized_context.append(tokenized_ctx)
-        tokenized_targets.append(tokenized_tgt)
-        context_lengths.append(len(tokenized_ctx))
-
-    data = list(zip(tokenized_context, tokenized_targets, context_lengths))
-    data.sort(key=lambda x: -x[2])
-
-    sorted_context, sorted_targets, sorted_context_lengths = zip(*data)
-
-    padded_context = nn.utils.rnn.pad_sequence(sorted_context, batch_first=True)
+    padded_context = nn.utils.rnn.pad_sequence(sorted_context, batch_first=True, padding_value=tokenizer.padding_idx)
     packed_context = nn.utils.rnn.pack_padded_sequence(padded_context, sorted_context_lengths, batch_first=True, enforce_sorted=True)
 
-    padded_targets = nn.utils.rnn.pad_sequence(sorted_targets, batch_first=True)
-    packed_targets = nn.utils.rnn.pack_padded_sequence(padded_targets, sorted_context_lengths, batch_first=True, enforce_sorted=True)
+    padded_targets = nn.utils.rnn.pad_sequence(sorted_targets, batch_first=True, padding_value=tokenizer.padding_idx)
+    packed_targets = nn.utils.rnn.pack_padded_sequence(padded_targets, sorted_context_lengths, batch_first=True, enforce_sorted=False)
     
     return packed_context.to(device), packed_targets.to(device)
 
