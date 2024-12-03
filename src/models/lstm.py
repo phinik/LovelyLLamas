@@ -11,6 +11,7 @@ class LSTM(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers, batch_first=True, bidirectional=bidirectional)
         hidden_dim = hidden_dim * 2 if bidirectional else hidden_dim
         self.fc = nn.Linear(hidden_dim, output_dim)
+        self.initialize_weights()
 
     def forward(self, packed_context, packed_targets):
         """
@@ -19,11 +20,9 @@ class LSTM(nn.Module):
         Args:
             packed_context (PackedSequence): Packed input context.
             packed_targets (PackedSequence): Packed input targets.
-            hidden_state (tuple): Optional initial hidden state for the LSTM.
 
         Returns:
-            PackedSequence: Predictions in packed sequence format.
-            tuple: Updated hidden state.
+            Tensor: Predictions for the input targets.
         """
         # Embedded inputs for PackedSequence
         embedded_context = nn.utils.rnn.PackedSequence(
@@ -41,6 +40,20 @@ class LSTM(nn.Module):
         predictions = self.fc(padded_output)
 
         return predictions
+    
+    def initialize_weights(self):
+        """
+        Initialize model weights.
+        """
+        for name, param in self.named_parameters():
+            if 'weight' in name:
+                nn.init.xavier_uniform_(param)
+            elif "bias" in name:
+                nn.init.zeros_(param)
+
+                if "bias_ih" in name:
+                    n = param.size(0)
+                    param.data[n // 4: n // 2].fill_(1.0) # set forget gate bias to 1.0
     
     def num_parameters(self):
         """

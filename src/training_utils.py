@@ -3,6 +3,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm  # Fortschrittsanzeige
 
+def pad_to_max_length(tensor, max_length, padding_idx):
+    padding_size = max_length - tensor.size(1)
+    if padding_size > 0:
+        padding = torch.full((tensor.size(0), padding_size), padding_idx, dtype=torch.long, device=tensor.device)
+        return torch.cat([tensor, padding], dim=1)
+    else:
+        return tensor
+
 def unpack_packed_sequence(packed_sequence, padding_idx, device):
     """
     Converts a PackedSequence back to a padded tensor for loss calculation.
@@ -64,10 +72,15 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_c
             loss = 0
 
             predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
-            predictions = predictions[:, :max(target_lengths)] # truncate predictions to target length
+            targets = packed_targets.data
 
-            flattened_predictions = predictions.reshape(-1, predictions.size(-1)) # [batch_size * max_seq_length, vocab_size]
-            flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
+            batch_size, max_seq_length, vocab_size = predictions.size()
+            flattened_predictions = predictions.reshape(-1, vocab_size) # [batch_size * max_seq_length, vocab_size]
+
+            padded_targets = torch.full((batch_size, max_seq_length), tokenizer.padding_idx, dtype=torch.long, device=device)
+            for i, length in enumerate(target_lengths):
+                padded_targets[i, :length] = targets[:length]
+            flattened_targets = padded_targets.view(-1)
 
             loss = criterion(flattened_predictions, flattened_targets)
             loss.backward()
@@ -96,10 +109,15 @@ def evaluate(model, dataloader, tokenizer, criterion, device):
                 loss = 0
 
                 predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
-                predictions = predictions[:, :max(target_lengths)] # truncate predictions to target length
+                targets = packed_targets.data
+                
+                batch_size, max_seq_length, vocab_size = predictions.size()
+                flattened_predictions = predictions.reshape(-1, vocab_size) # [batch_size * max_seq_length, vocab_size]
 
-                flattened_predictions = predictions.reshape(-1, predictions.size(-1)) # [batch_size * max_seq_length, vocab_size]
-                flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
+                padded_targets = torch.full((batch_size, max_seq_length), tokenizer.padding_idx, dtype=torch.long, device=device)
+                for i, length in enumerate(target_lengths):
+                    padded_targets[i, :length] = targets[:length]
+                flattened_targets = padded_targets.view(-1)
 
                 loss = criterion(flattened_predictions, flattened_targets)
                 total_loss += loss.item()
