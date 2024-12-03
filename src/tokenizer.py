@@ -1,6 +1,3 @@
-import json
-import os
-
 from transformers import BertTokenizer
 from typing import List
 
