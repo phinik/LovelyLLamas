@@ -12,10 +12,10 @@ from training_utils import train, evaluate
 DATASET_PATH = 'C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2'
 #DATASET_PATH = 'C:/Users/Niels/Desktop/Uni/WS25/Master-Projekt/debug_dataset'
 BATCH_SIZE = 16
-EMBEDDING_DIM = 64 #128
-HIDDEN_DIM = 128 #256
+EMBEDDING_DIM = 32 #128
+HIDDEN_DIM = 64 #256
 LEARNING_RATE = 0.005
-NUM_EPOCHS = 18
+NUM_EPOCHS = 300
 GRADIENT_CLIP = 1.0
 MODEL_PATH = "weather_lstm.pth"
 
@@ -59,8 +59,8 @@ best_loss = float('inf')
 print(f"Training started on model with {NUM_EPOCHS} epochs.")
 print(f"Parameters: {model.num_parameters()}")
 for epoch in range(NUM_EPOCHS):
-    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0, reset_hidden=True)
-    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device, reset_hidden=True)
+    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0)
+    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device)
 
     scheduler.step(eval_loss)
 

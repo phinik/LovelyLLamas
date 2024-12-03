@@ -1,3 +1,4 @@
+import argparse
 import torch
 from models.lstm import LSTM
 from tokenizer import Tokenizer
@@ -48,7 +49,6 @@ def preprocess_input(text: str = None, city_name: str = None, json_path: str = N
     return "<start> " + preprocessed_data["overview"] + " <stop>"
 
 
-
 def load_model(model_path, vocab_size, embedding_dim, hidden_dim, output_dim, device, bidirectional=False):
     """
     Load the trained WeatherLSTM model.
@@ -67,7 +67,7 @@ def generate_weather_report(model, tokenizer, text, device):
     tokenized_text = torch.tensor(tokenizer.encode(text)).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        prediction, _ = model.predict(tokenized_text)
+        prediction = model.predict(tokenized_text)
         prediction_ids = prediction.argmax(dim=-1).squeeze(0).cpu().numpy()
 
     # Decode the prediction into text
@@ -75,35 +75,47 @@ def generate_weather_report(model, tokenizer, text, device):
 
     return decoded_prediction
 
+def main():
+    # Argument parser for command-line arguments
+    parser = argparse.ArgumentParser(description="Generate weather reports using an LSTM model.")
+    parser.add_argument("--json_path", type=str, default=None, help="Path to the JSON file for input data.")
+    parser.add_argument("--raw_text", type=str, default=None, help="Raw input text for the weather report.")
+    parser.add_argument("--city_name", type=str, default=None, help="City name for text input preprocessing.")
+    parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model file.")
+    parser.add_argument("--dataset_path", type=str, required=True, help="Path to the tokenizer dataset.")
 
-# Device configuration
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args()
 
-# Load tokenizer and model
-tokenizer = Tokenizer(dataset_path='C:/Users/Agando/Desktop/Uni/Master-Projekt/debug_dataset')
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>', '<kmh>', '<percent>'])
+    # Device configuration
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Ensure consistency with training tokenizer state
-tokenizer_vocab_size = tokenizer.vocab_size
+    # Load tokenizer and model
+    tokenizer = Tokenizer(dataset_path=args.dataset_path)
+    tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<pad>', '<kmh>', '<percent>'])
 
-model = load_model(
-    model_path="best_model_loss.pth",
-    vocab_size=tokenizer_vocab_size,
-    embedding_dim=64,
-    hidden_dim=128,
-    output_dim=tokenizer_vocab_size,
-    device=device,
-    bidirectional=True
-)
+    # Ensure consistency with training tokenizer state
+    tokenizer_vocab_size = tokenizer.vocab_size
+    print(tokenizer_vocab_size)
 
-# Input text or JSON file path
-json_file_path = "C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2/train/2024-11-19_aachen-DE0000003_standardised.json"  # Set to None if not using JSON
-raw_text = None  # Set to your input text if not using JSON
-city_name = None  # Set to your city name if using text input
+    model = load_model(
+        model_path=args.model_path,
+        vocab_size=tokenizer_vocab_size,
+        embedding_dim=32,
+        hidden_dim=64,
+        output_dim=tokenizer_vocab_size,
+        device=device,
+        bidirectional=True
+    )
 
-preprocessed_text = preprocess_input(text=raw_text, city_name=city_name, json_path=json_file_path)
+    # Preprocess input
+    preprocessed_text = preprocess_input(text=args.raw_text, city_name=args.city_name, json_path=args.json_path)
 
-# Generate prediction
-predicted_report = generate_weather_report(model, tokenizer, preprocessed_text, device)
-print("Predicted Weather Report:")
-print(predicted_report)
+    # Generate prediction
+    predicted_report = generate_weather_report(model, tokenizer, preprocessed_text, device)
+    print("Predicted Weather Report:")
+    print(predicted_report)
+
+
+
+if __name__ == "__main__":
+    main()

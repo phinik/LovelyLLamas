@@ -12,7 +12,7 @@ class LSTM(nn.Module):
         hidden_dim = hidden_dim * 2 if bidirectional else hidden_dim
         self.fc = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, packed_context, packed_targets, hidden_state=None):
+    def forward(self, packed_context, packed_targets):
         """
         Forward pass for the LSTM model.
 
@@ -34,13 +34,13 @@ class LSTM(nn.Module):
         )
 
         # LSTM forward pass
-        lstm_out, hidden_state = self.lstm(embedded_context, hidden_state) # expects a PackedSequence
+        lstm_out, _ = self.lstm(embedded_context) # expects a PackedSequence
 
         # Unpack the output for the Linear Layer
         padded_output, output_lengths = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
         predictions = self.fc(padded_output)
 
-        return predictions, hidden_state
+        return predictions
     
     def num_parameters(self):
         """
@@ -49,11 +49,11 @@ class LSTM(nn.Module):
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def predict(self, inputs, hidden_state=None):
+    def predict(self, inputs):
         """
         Predict weather report for a given input without packed sequences.
         """
         embedded_inputs = self.embedding(inputs)
-        lstm_out, hidden_state = self.lstm(embedded_inputs, hidden_state)
+        lstm_out, _ = self.lstm(embedded_inputs)
         output = self.fc(lstm_out)
-        return output, hidden_state
+        return output

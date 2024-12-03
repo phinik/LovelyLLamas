@@ -10,27 +10,24 @@ def unpack_packed_sequence(packed_sequence, padding_idx, device):
     target_data = packed_sequence.data
     batch_sizes = packed_sequence.batch_sizes
 
-    padded_targets = torch.full(
-        (batch_sizes[0], batch_sizes.sum().item()),
-        padding_idx,
-        dtype=torch.long,
-        device=device
-    )
+    num_sequences = batch_sizes[0].item()
+    sequence_lengths = torch.zeros(num_sequences, dtype=torch.long, device=device)
+
+    for i, batch_size in enumerate(batch_sizes):
+        sequence_lengths[:batch_size] += 1
+    max_seq_length = sequence_lengths.max().item()
+    padded_targets = torch.full((num_sequences, max_seq_length), padding_idx, dtype=torch.long, device=device)
 
     data_idx = 0
     for timestep, batch_size in enumerate(batch_sizes):
         for seq_idx in range(batch_size):
+            if data_idx >= len(target_data):
+                break
             padded_targets[seq_idx, timestep] = target_data[data_idx]
             data_idx += 1
 
     flattened_targets = padded_targets.view(-1)
     return flattened_targets
-
-def split_sequence(sequence, max_length=512):
-    """
-    Splits a sequence into chunks of max_length.
-    """
-    return [sequence[i:i + max_length] for i in range(0, len(sequence), max_length)]
     
 def prepare_batch(batch, tokenizer, device, max_length=512):
     """
@@ -65,29 +62,21 @@ def prepare_batch(batch, tokenizer, device, max_length=512):
     
     return packed_context.to(device), packed_targets.to(device)
 
-def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0, reset_hidden=False):
+def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0):
     model.train()
     total_loss = 0
-    hidden_state = None
 
     with tqdm(total=len(dataloader), desc="Training", unit="batch") as pbar:
         for batch in dataloader:
             packed_context, packed_targets = prepare_batch(batch, tokenizer, device)
 
-            # Reset hidden state for each batch
-            if reset_hidden:
-                hidden_state = None
-
             optimizer.zero_grad()
 
             loss = 0
 
-            predictions, hidden_state = model(packed_context, packed_targets, hidden_state) # predictions = [batch_size, max_seq_length, vocab_size]
+            predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
             flattened_predictions = predictions.view(-1, predictions.shape[2]) # [batch_size * max_seq_length, vocab_size]
             flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
-
-            if not reset_hidden:
-                hidden_state = (hidden_state[0].detach(), hidden_state[1].detach())
 
             loss = criterion(flattened_predictions, flattened_targets)
             loss.backward()
@@ -104,26 +93,20 @@ def train(model, dataloader, tokenizer, optimizer, criterion, device, gradient_c
 
     return total_loss / len(dataloader)
 
-def evaluate(model, dataloader, tokenizer, criterion, device, reset_hidden=False):
+def evaluate(model, dataloader, tokenizer, criterion, device):
     model.eval()
     total_loss = 0
-    hidden_state = None
 
     with tqdm(total=len(dataloader), desc="Evaluating", unit="batch") as pbar:
         with torch.no_grad():
             for batch in dataloader:
                 packed_context, packed_targets = prepare_batch(batch, tokenizer, device)
 
-                if reset_hidden:
-                    hidden_state = None
-
                 loss = 0
 
-                predictions, hidden_state = model(packed_context, packed_targets, hidden_state) # predictions = [batch_size, max_seq_length, vocab_size]
+                predictions = model(packed_context, packed_targets) # predictions = [batch_size, max_seq_length, vocab_size]
                 flattened_predictions = predictions.view(-1, predictions.shape[2]) # [batch_size * max_seq_length, vocab_size]
                 flattened_targets = unpack_packed_sequence(packed_targets, tokenizer.padding_idx, device=device)
-                if not reset_hidden:
-                    hidden_state = (hidden_state[0].detach(), hidden_state[1].detach())
 
                 loss = criterion(flattened_predictions, flattened_targets)
                 total_loss += loss.item()
