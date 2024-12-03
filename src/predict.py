@@ -68,7 +68,10 @@ def generate_weather_report(model, tokenizer, text, device):
 
     with torch.no_grad():
         prediction = model.predict(tokenized_text)
-        prediction_ids = prediction.argmax(dim=-1).squeeze(0).cpu().numpy()
+        prediction = torch.argmax(prediction, dim=-1)
+
+    # Decode the prediction
+    prediction_ids = prediction.squeeze(0).cpu().numpy().tolist()
 
     # Decode the prediction into text
     decoded_prediction = tokenizer.decode(prediction_ids)
@@ -92,7 +95,7 @@ def main():
     # Load tokenizer and model
     tokenizer = Tokenizer(dataset_path=args.dataset_path, model_name="distilbert-base-german-cased")
     tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
-    
+
     # Ensure consistency with training tokenizer state
     tokenizer_vocab_size = tokenizer.vocab_size
 
