@@ -18,20 +18,21 @@ class Tokenizer:
         self._target_tokens = list(self.tokenizer.get_vocab().keys())
         self._context_tokens = list(self.tokenizer.get_vocab().keys())
 
-        # Add custom tokens
-        self.add_custom_tokens(custom_tokens=custom_tokens)
+        # Add custom tokens, avoid duplicates
+        self.add_custom_tokens(custom_tokens)
 
     def add_custom_tokens(self, custom_tokens: List[str] = None):
-        num_added_tokens = self.tokenizer.add_tokens(custom_tokens)
-        self.custom_tokens = custom_tokens or []
+        # Filter out existing tokens
+        new_tokens = [token for token in custom_tokens if token not in self.tokenizer.vocab]
+        num_added_tokens = self.tokenizer.add_tokens(new_tokens)
 
         if num_added_tokens > 0:
             print(f"Added {num_added_tokens} tokens to the tokenizer and resized embeddings.")
 
         # Update vocabularies with custom tokens
         vocab_size = len(self.tokenizer)
-        self._stoi_targets = {token: i for i, token in enumerate(self._target_tokens + self.custom_tokens)}
-        self._stoi_context = {token: i for i, token in enumerate(self._context_tokens + self.custom_tokens)}
+        self._stoi_targets = {token: i for i, token in enumerate(self._target_tokens + custom_tokens)}
+        self._stoi_context = {token: i for i, token in enumerate(self._context_tokens + custom_tokens)}
         self._itos_targets = {i: token for token, i in self._stoi_targets.items()}
         self._itos_context = {i: token for token, i in self._stoi_context.items()}
 

@@ -11,10 +11,10 @@ from training_utils import train, evaluate
 # Paths and parameters
 DATASET_PATH = 'C:/Users/Agando/Desktop/Uni/Master-Projekt/dataset2'
 #DATASET_PATH = 'C:/Users/Niels/Desktop/Uni/WS25/Master-Projekt/debug_dataset'
-BATCH_SIZE = 16
+BATCH_SIZE = 28
 EMBEDDING_DIM = 16 #128
 HIDDEN_DIM = 32 #256
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.01
 NUM_EPOCHS = 300
 GRADIENT_CLIP = 1.0
 MODEL_PATH = "weather_lstm.pth"
@@ -23,8 +23,7 @@ MODEL_PATH = "weather_lstm.pth"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load tokenizer
-tokenizer = Tokenizer(DATASET_PATH, model_name="distilbert-base-german-cased")
-tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
+tokenizer = Tokenizer(DATASET_PATH, model_name="distilbert-base-german-cased", custom_tokens=['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
 
 # Create DataLoaders
 train_dataloader = get_train_dataloader_weather_dataset(DATASET_PATH, BATCH_SIZE, cached=True)
@@ -59,8 +58,9 @@ best_loss = float('inf')
 print(f"Training started on model with {NUM_EPOCHS} epochs.")
 print(f"Parameters: {model.num_parameters()}")
 for epoch in range(NUM_EPOCHS):
-    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0)
-    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device)
+    teacher_forcing_ratio = 0.5 * (1 - epoch / NUM_EPOCHS)  # Linearly decrease teacher forcing ratio
+    train_loss = train(model, train_dataloader, tokenizer, optimizer, criterion, device, gradient_clip=1.0, teacher_forcing_ratio=teacher_forcing_ratio)
+    eval_loss = evaluate(model, eval_dataloader, tokenizer, criterion, device, teacher_forcing_ratio=0)
 
     scheduler.step(eval_loss)
 

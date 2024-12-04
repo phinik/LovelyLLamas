@@ -93,8 +93,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load tokenizer and model
-    tokenizer = Tokenizer(dataset_path=args.dataset_path, model_name="distilbert-base-german-cased")
-    tokenizer.add_custom_tokens(['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
+    tokenizer = Tokenizer(dataset_path=args.dataset_path, model_name="distilbert-base-german-cased", custom_tokens=['<start>', '<stop>', '<degC>', '<city>', '<kmh>', '<percent>'])
 
     # Ensure consistency with training tokenizer state
     tokenizer_vocab_size = tokenizer.vocab_size
