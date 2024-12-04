@@ -42,9 +42,9 @@ class Evaluator:
             targets = batch["report_short"]
 
             # Tokenize
-            for i in range(len(context)):
-                context[i] = torch.tensor(self._tokenizer.stoi_context(context[i])).unsqueeze(0)
-                targets[i] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[i] + " <stop>"))
+            for j in range(len(context)):
+                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -55,19 +55,19 @@ class Evaluator:
 
             # Context sequences always have equal length, hence, no padding is required and the list of tensors is just
             # concatenated.
-            context = torch.stack(context) # torch.stack better since all sequences have the same length
+            context = torch.concat(context)
 
             # Move tensors 
             targets = targets.to(device=DEVICE)
             context = context.to(device=DEVICE)
             
-            for i in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, i:i+self._config["block_size"]]
-                labels = targets[:, i+1:i+1+self._config["block_size"]]
+            for j in range(0, targets.shape[1] - self._config["block_size"]):
+                inputs = targets[:, j:j+self._config["block_size"]]
+                labels = targets[:, j+1:j+1+self._config["block_size"]]
 
                 prediction = model(context, inputs)
                 
-                total_loss_values += torch.count_nonzero(labels != self._tokenizer.padding_idx_target) # Count non-padding tokens
+                total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
                 

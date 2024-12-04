@@ -1,106 +1,112 @@
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
-
+import os
+import json
 
 class LSTM(nn.Module):
-    """LSTM model for generating weather reports."""
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, num_layers=2, dropout=0.2, bidirectional=False):
+    ''' A sequence-to-sequence model using an LSTM architecture. '''
+
+    def __init__(self, n_src_vocab: int, n_trg_vocab: int, src_pad_idx: int, trg_pad_idx: int,
+    embedding_dim: int = 512, hidden_dim: int = 512, num_layers: int = 2, dropout: float = 0.1, bidirectional: bool = False, trg_emb_prj_weight_sharing: bool = True):
+
         super(LSTM, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.embedding.weight.requires_grad = True
 
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout, bidirectional=bidirectional)
-        hidden_dim = hidden_dim * 2 if bidirectional else hidden_dim
+        self._params_dict = {
+            "n_src_vocab": n_src_vocab,
+            "n_trg_vocab": n_trg_vocab,
+            "src_pad_idx": src_pad_idx,
+            "trg_pad_idx": trg_pad_idx,
+            "embedding_dim": embedding_dim,
+            "hidden_dim": hidden_dim,
+            "num_layers": num_layers,
+            "dropout": dropout,
+            "bidirectional": bidirectional,
+            "trg_emb_prj_weight_sharing": trg_emb_prj_weight_sharing
+        }
 
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        self._src_pad_idx = src_pad_idx
+        self._trg_pad_idx = trg_pad_idx
 
-        #self.initialize_weights()
+        self._embedding_src = nn.Embedding(n_src_vocab, embedding_dim, padding_idx=src_pad_idx)
+        self._embedding_trg = nn.Embedding(n_trg_vocab, embedding_dim, padding_idx=trg_pad_idx)
 
-    def initialize_weights(self):
-        for name, param in self.named_parameters():
-            if 'weight' in name:
-                if 'lstm' in name:
-                    nn.init.orthogonal_(param.data)
-                else:
-                    nn.init.xavier_normal_(param.data)
-            else:
-                nn.init.constant_(param.data, 0)
-
-    def forward(self, packed_context, packed_targets, teacher_forcing_ratio=0.5):
-        """
-        Forward pass for the LSTM model with teacher forcing.
-
-        Args:
-            packed_context (PackedSequence): Packed input context.
-            packed_targets (PackedSequence): Packed input targets.
-            teacher_forcing_ratio (float): Probability of using true target as next input during training.
-
-        Returns:
-            Tensor: Predictions for the input targets.
-        """
-        # Embedded inputs for PackedSequence
-        embedded_context = nn.utils.rnn.PackedSequence(
-            self.embedding(packed_context.data), 
-            packed_context.batch_sizes,
-            packed_context.sorted_indices,
-            packed_context.unsorted_indices
+        self.encoder = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout if num_layers > 1 else 0,
+            bidirectional=bidirectional,
+            batch_first=True
         )
 
-        # Unpack targets for processing
-        targets, targets_lengths = nn.utils.rnn.pad_packed_sequence(packed_targets, batch_first=True)
-        targets = targets.long()
+        self.decoder = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout if num_layers > 1 else 0,
+            bidirectional=False, # Decoder is always uni-directional
+            batch_first=True
+        )
 
-        # Initialize LSTM state
-        batch_size, max_seq_len = targets.size()
-        device = targets.device
+        self.fc = nn.Linear(hidden_dim, n_trg_vocab)
+        print(n_src_vocab)
 
-        # Prepare input and hidden state for LSTM
-        outputs = torch.zeros(batch_size, max_seq_len, self.fc.out_features, device=device)
-        lstm_hidden = None  # initialize hidden state to None or provide initial hidden states if needed
+        if trg_emb_prj_weight_sharing:
+            if embedding_dim != hidden_dim:
+                raise ValueError("When using the weight sharing mechanism, the hidden dimension must be equal to the embedding dimension.")
+            self.fc.weight = self._embedding_trg.weight
 
-        # Pass context through LSTM
-        packed_output, lstm_hidden = self.lstm(embedded_context, lstm_hidden)
+   
+    def forward(self, src_seq, trg_seq):
+        # Source Embedding
+        src_emb = self._embedding_src(src_seq)
 
-        # Unpack LSTM outputs to process step-by-step
-        lstm_output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        # Encode Source Sequence
+        enc_output, (hidden, cell) = self.encoder(src_emb)
 
-        # Process each timestep
-        for t in range(max_seq_len):
-            if t == 0 or torch.rand(1).item() < teacher_forcing_ratio:
-                # Use the true target at timestep `t` (teacher forcing)
-                input_step = targets[:, t]
-            else:
-                # Use the model's previous prediction
-                input_step = predictions.argmax(dim=1)
+        if self.encoder.bidirectional:
+            # Combine bidirectional hidden states
+            hidden = hidden.view(self.encoder.num_layers, 2, -1, self._params_dict["hidden_dim"])
+            hidden = hidden[:, 0, :, :] + hidden[:, 1, :, :]  # Combine forward and backward
+            hidden = hidden.view(self.encoder.num_layers, -1, self._params_dict["hidden_dim"])
 
-            # Embed the input step
-            embedded_input = self.embedding(input_step.long())
-            embedded_input = embedded_input.unsqueeze(1)
+            # Combine bidirectional cell states
+            cell = cell.view(self.encoder.num_layers, 2, -1, self._params_dict["hidden_dim"])
+            cell = cell[:, 0, :, :] + cell[:, 1, :, :]  # Combine forward and backward
+            cell = cell.view(self.encoder.num_layers, -1, self._params_dict["hidden_dim"])
 
-            # Pass through LSTM one step
-            lstm_output, lstm_hidden = self.lstm(embedded_input, lstm_hidden)
+        # Target Embedding
+        trg_emb = self._embedding_trg(trg_seq)
 
-            # Generate prediction
-            predictions = self.fc(lstm_output.squeeze(1))
+        # Decode Target Sequence
+        dec_output, _ = self.decoder(trg_emb, (hidden, cell))
 
-            # Store predictions
-            outputs[:, t] = predictions
+        flattened_dec_output = dec_output.reshape(-1, dec_output.size(-1))
 
-        return outputs
+        # Project to Vocabulary Space
+        seq_logit = self.fc(flattened_dec_output)
 
-    def num_parameters(self):
-        """
-        Returns the number of trainable parameters in the model.
-        :return: Total number of trainable parameters.
-        """
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        return seq_logit.view(-1, seq_logit.size(1))
 
-    def predict(self, inputs):
-        """
-        Predict weather report for a given input without packed sequences.
-        """
-        embedded_inputs = self.embedding(inputs)
-        lstm_out, _ = self.lstm(embedded_inputs)
+    def save_weights_as(self, dir: str, filename: str):
+        torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
-        output = self.fc(lstm_out)
-        return output
+    def load_weights_from(self, path: str):
+        self.load_state_dict(torch.load(path, weights_only=True))
+
+    def save_params_to(self, path: str):
+        with open(os.path.join(path, "params.json"), "w") as f:
+            json.dump(self._params_dict, f, sort_keys=True, indent=4)
+
+    @staticmethod
+    def from_params(path: str) -> LSM:
+        with open(path, "r") as f:
+            params = json.load(f)
+
+        return LSTM(**params)
+
+# Utility functions
+def get_pad_mask(seq: torch.Tensor, pad_idx: int) -> torch.Tensor:
+    return (seq != pad_idx).unsqueeze(-2)

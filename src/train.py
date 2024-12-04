@@ -14,6 +14,7 @@ from src.loss import CELoss
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
 from src.eval import Evaluator
+from src.models.lstm import LSTM
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -31,18 +32,17 @@ class Trainer:
         # Tokenizer
         self._tokenizer = DummyTokenizer(self._config["dataset"])
 
-        # Model --> Default has 44.497.920 parameters!
-        self._model = Transformer(
-            n_src_vocab=self._tokenizer.size_context_vocab, 
-            n_trg_vocab=self._tokenizer.size_target_vocab, 
-            src_pad_idx=self._tokenizer.padding_idx_context, 
+        self._model = LSTM(
+            n_src_vocab=self._tokenizer.size_context_vocab,
+            n_trg_vocab=self._tokenizer.size_target_vocab,
+            src_pad_idx=self._tokenizer.padding_idx_context,
             trg_pad_idx=self._tokenizer.padding_idx_target,
-            emb_src_trg_weight_sharing=False,
-            n_head=4,
-            n_layers=2,
-            d_inner=512,
-            d_model=256,
-            d_word_vec=256
+            embedding_dim=16,
+            hidden_dim=32,
+            num_layers=2,
+            dropout=0.1,
+            bidirectional=False,
+            trg_emb_prj_weight_sharing=False
         )
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])
@@ -69,11 +69,12 @@ class Trainer:
         for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
-            print(f" [TRAINING] Epoch {epoch}")
+            print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
             self._train_epoch(epoch=epoch)
 
-            print(f" [EVALUATING] Epoch {epoch}")
+            print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
             eval_dict = self._evaluator.evaluate(self._model)
+            print(f"              Loss: {eval_dict['loss']}")
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
 
@@ -93,9 +94,9 @@ class Trainer:
             targets = batch["report_short"]
 
             # Tokenize
-            for i in range(len(context)):
-                context[i] = torch.tensor(self._tokenizer.stoi_context(context[i])).unsqueeze(0)
-                targets[i] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[i] + " <stop>"))
+            for j in range(len(context)):
+                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -106,7 +107,7 @@ class Trainer:
 
             # Context sequences always have equal length, hence, no padding is required and the list of tensors is just
             # concatenated.
-            context = torch.concat(context)
+            context = torch.cat(context)
 
             # Move tensors 
             targets = targets.to(device=DEVICE)
@@ -116,9 +117,9 @@ class Trainer:
 
             total_loss = 0
             n_total_loss_values = 0
-            for i in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, i:i+self._config["block_size"]]
-                labels = targets[:, i+1:i+1+self._config["block_size"]]
+            for j in range(0, targets.shape[1] - self._config["block_size"]):
+                inputs = targets[:, j:j+self._config["block_size"]]
+                labels = targets[:, j+1:j+1+self._config["block_size"]]
 
                 prediction = self._model(context, inputs)
                 
@@ -132,7 +133,7 @@ class Trainer:
 
             self._optimizer.step()
             
-            self._writer.add_scalar("train/loss", total_loss.item(), epoch * (i + 1))
+            self._writer.add_scalar("train/loss", total_loss.item(), (epoch-1) * len(self._train_dataloader) + i)
 
 
 
@@ -155,7 +156,7 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 5,
-        "epochs": 10,
+        "epochs": 20,
         "block_size": 20
     }
 
@@ -168,3 +169,4 @@ if __name__ == "__main__":
     print(f" [DEVICE] Using {DEVICE}")
     trainer = Trainer(config)
     trainer.train()
+
