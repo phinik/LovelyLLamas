@@ -46,8 +46,7 @@ def count_occurances(reports: List[str]) -> Dict:
         tf_counts.append(report_tf_counts)
         
         # update term in documents counts
-        words_in_doc = set(words)
-        for word in words_in_doc:
+        for word in report_tf_counts.keys():
             idf_counts[word] = idf_counts.get(word, 0) + 1
 
     return {"idf_counts": idf_counts, "tf_counts": tf_counts}
