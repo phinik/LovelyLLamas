@@ -1,12 +1,15 @@
 import argparse
 import tqdm
 import torch
+import torch.nn.functional as F
+import os
 
 from typing import Dict
 
 from src.dataloader import *
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
+from src.tokenizer import Tokenizer
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -24,7 +27,8 @@ class Generator:
         )
 
         # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
+        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
+        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
 
     @torch.no_grad()
     def sample(self, model):
@@ -36,8 +40,8 @@ class Generator:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
+                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._target_tokenizer.stoi("<start> " + targets[j] + " <stop>"))
 
             context = context[0]
             targets = targets[0]
@@ -47,21 +51,21 @@ class Generator:
             context = context.to(device=DEVICE)
             
             running_input = torch.zeros(size=(1, self._config["block_size"] + 1), dtype=targets.dtype).to(DEVICE)
-            running_input[0, 0] = self._tokenizer.start_idx_target
+            running_input[0, 0] = self._target_tokenizer.start_idx
             token_sequence = []
 
             j = 0
             k = 0
-            while running_input[0, -2] != self._tokenizer.stop_idx_target and k < 200:
+            while running_input[0, -2] != self._target_tokenizer.stop_idx and k < 200:
                 prediction = model(context, running_input[:, :self._config["block_size"]])
 
                 if j < self._config["block_size"]:
                     prediction = prediction[j, :]
-                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction, dim=0), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
                     j += 1
                 else:
                     prediction = prediction[-1, :]
-                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction, dim=0), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
 
                 token_sequence.append(next_token.item())
 
@@ -75,7 +79,7 @@ class Generator:
             
             print(f"Target: {batch['report_short'][0]}")
             print(f"Overview: {batch['overview'][0]}")
-            print(f"Predic: {self._tokenizer.itos_targets(token_sequence).replace('<city>', batch['city'][0])}")
+            print(f"Predic: {self._target_tokenizer.itos(token_sequence).replace('<city>', batch['city'][0])}")
 
             exit()
 
@@ -86,20 +90,21 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    parser.add_argument("--model_params", type=str, help="Which model params to use")
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
 
     args = parser.parse_args()
-    
+       
     config = {
         "name": args.name,
         "dataset": args.dataset_path,
         "model_weights": args.model_weights,
-        "model_params": args.model_params,
+        "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
         "cached": args.cache_data,
         "model": "transformer", #args.model,
-        "block_size": 20
+        "block_size": 20,
+        "tokenizer": args.tokenizer
     }
 
     model = Transformer.from_params(config["model_params"])

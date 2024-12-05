@@ -8,6 +8,8 @@ from src.dataloader import get_eval_dataloader_weather_dataset
 from src.dummy_tokenizer import DummyTokenizer
 from src.loss import CELoss
 from src.models import Transformer
+from src.tokenizer import Tokenizer
+import src.determinism
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -25,10 +27,11 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
+        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
+        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
 
         # Loss
-        self._loss = CELoss(ignore_idx=self._tokenizer.padding_idx_target)
+        self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
     @torch.no_grad()
     def evaluate(self, model) -> Dict:
@@ -43,13 +46,13 @@ class Evaluator:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
+                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._target_tokenizer.stoi("<start> " + targets[j] + " <stop>"))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
                 targets, 
-                padding_value=self._tokenizer.padding_idx_target, 
+                padding_value=self._target_tokenizer.padding_idx, 
                 batch_first=True
             )
 
@@ -67,7 +70,7 @@ class Evaluator:
 
                 prediction = model(context, inputs)
                 
-                total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
+                total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
                 
@@ -81,9 +84,10 @@ if __name__ == "__main__":
     parser.add_argument("--model_params", type=str, help="Which model params to use")
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     
     args = parser.parse_args()
-    
+        
     config = {
         "dataset": args.dataset_path,
         "model_weights": args.model_weights,
@@ -91,7 +95,8 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": "transformer", #args.model,
         "batch_size": 5,
-        "block_size": 20
+        "block_size": 20,
+        "tokenizer": args.tokenizer
     }
 
     model = Transformer.from_params(config["model_params"])

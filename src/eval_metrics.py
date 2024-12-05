@@ -2,6 +2,7 @@ import argparse
 import json
 import tqdm
 import torch
+import torch.nn.functional as F
 import os
 
 from typing import Dict
@@ -29,7 +30,7 @@ class Evaluator:
 
         # Tokenizer
         self._context_tokenizer = DummyTokenizer(self._config["dataset"])
-        self._target_tokenizer = DummyTokenizer(self._config["dataset"])#Tokenizer()
+        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
         
         self._metrics = metrics
 
@@ -64,11 +65,11 @@ class Evaluator:
 
                 if j < self._config["block_size"]:
                     prediction = prediction[j, :]
-                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction, dim=0), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
                     j += 1
                 else:
                     prediction = prediction[-1, :]
-                    next_token = torch.multinomial(torch.nn.functional.softmax(prediction, dim=0), 1) #torch.argmax(prediction)
+                    next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
 
                 token_sequence.append(next_token.item())
 
@@ -96,9 +97,9 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    #parser.add_argument("--model_params", type=str, help="Which model params to use")
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--metrics", nargs="+", choices=["bertscore", "bleu", "rouge"], type=str, help="", required=True)
     
     args = parser.parse_args()
@@ -110,7 +111,8 @@ if __name__ == "__main__":
         "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
         "cached": args.cache_data,
         "model": "transformer", #args.model,
-        "block_size": 20
+        "block_size": 20,
+        "tokenizer": args.tokenizer
     }
 
     model = Transformer.from_params(config["model_params"])

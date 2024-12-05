@@ -13,9 +13,13 @@ from src.dataloader import *
 from src.loss import CELoss
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
+from src.tokenizer import Tokenizer
 from src.eval import Evaluator
+import src.determinism
+
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class Trainer:
     def __init__(self, config: Dict):
@@ -29,33 +33,33 @@ class Trainer:
         )
 
         # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
+        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
+        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
 
         # Model --> Default has 44.497.920 parameters!
         self._model = Transformer(
-            n_src_vocab=self._tokenizer.size_context_vocab, 
-            n_trg_vocab=self._tokenizer.size_target_vocab, 
-            src_pad_idx=self._tokenizer.padding_idx_context, 
-            trg_pad_idx=self._tokenizer.padding_idx_target,
+            n_src_vocab=self._context_tokenizer.size_context_vocab, 
+            n_trg_vocab=self._target_tokenizer.vocab_size, 
+            src_pad_idx=self._context_tokenizer.padding_idx_context, 
+            trg_pad_idx=self._target_tokenizer.padding_idx,
             emb_src_trg_weight_sharing=False,
             n_head=4,
-            n_layers=3,
-            d_inner=512,
+            n_layers=2,
+            d_inner=512, # 512
             d_model=256,
             d_word_vec=256
         )
         self._model.to(DEVICE)
-        self._model.save_params_to(self._config["checkpoints"])
-
-        print(sum([param.nelement() for param in self._model.parameters()]))
+        self._model.save_params_to(self._config["checkpoints"])        
+        print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
 
         #exit()
         # Loss
-        self._loss = CELoss(ignore_idx=self._tokenizer.padding_idx_target)
+        self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
-        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=10)
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=10)  # TODO Patience auf 5 reduzieren
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
@@ -95,13 +99,13 @@ class Trainer:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
+                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._target_tokenizer.stoi("<start> " + targets[j] + " <stop>"))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
                 targets, 
-                padding_value=self._tokenizer.padding_idx_target, 
+                padding_value=self._target_tokenizer.padding_idx, 
                 batch_first=True
             )
 
@@ -123,7 +127,7 @@ class Trainer:
 
                 prediction = self._model(context, inputs)
                 
-                n_total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
+                n_total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
                 labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
                 total_loss += self._loss(prediction, labels)
                 
@@ -145,6 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--tensorboard_path", type=str, help="Where to store tensorboard summary")
     parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     
     args = parser.parse_args()
     
@@ -155,9 +160,10 @@ if __name__ == "__main__":
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
         "cached": args.cache_data,
         "model": args.model,
-        "batch_size": 5,
-        "epochs": 20,
-        "block_size": 20
+        "batch_size": 10,
+        "epochs": 40,
+        "block_size": 20,
+        "tokenizer": args.tokenizer
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)
@@ -166,6 +172,6 @@ if __name__ == "__main__":
     with open(os.path.join(config["checkpoints"], "config.json"), "w") as f:
         json.dump(config, f, sort_keys=True, indent=4)
 
-    print(f" [DEVICE] Using {DEVICE}")
+    print(f" [DEVICE] {DEVICE}")
     trainer = Trainer(config)
     trainer.train()
