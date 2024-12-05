@@ -122,7 +122,7 @@ if __name__ == "__main__":
     metrics = []
     for metric in args.metrics:
         if metric == "bertscore":
-            metrics.append(BertScore(config["dataset"]))
+            metrics.append(BertScore())
         if metric == "bleu":
             metrics.append(Bleu())
         if metric == "rouge":
