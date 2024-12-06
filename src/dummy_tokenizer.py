@@ -20,7 +20,7 @@ class DummyTokenizer:
         self._itos_context = {i: token for token, i in self._stoi_targets.items()}
 
     def _load_tokens(self, filename: str) -> List:
-        with open(os.path.join(self._dataset_path, filename), "r") as f:
+        with open(os.path.join(self._dataset_path, filename), "r", encoding='utf-8') as f:
             return json.load(f)
 
     @property

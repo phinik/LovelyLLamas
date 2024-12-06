@@ -13,6 +13,7 @@ from src.dataloader import *
 from src.loss import CELoss
 from src.models import Transformer
 from src.dummy_tokenizer import DummyTokenizer
+from src.tokenizer import BertBasedTokenizer
 from src.eval import Evaluator
 from src.models.lstm import LSTM
 
@@ -31,23 +32,25 @@ class Trainer:
 
         # Tokenizer
         self._tokenizer = DummyTokenizer(self._config["dataset"])
+        #self._tokenizer = BertBasedTokenizer(self._config["dataset"])
 
         self._model = LSTM(
             n_src_vocab=self._tokenizer.size_context_vocab,
             n_trg_vocab=self._tokenizer.size_target_vocab,
             src_pad_idx=self._tokenizer.padding_idx_context,
             trg_pad_idx=self._tokenizer.padding_idx_target,
-            embedding_dim=16,
-            hidden_dim=32,
-            num_layers=2,
+            embedding_dim=64,
+            hidden_dim=128,
+            num_layers=1,
             dropout=0.1,
-            bidirectional=False,
-            trg_emb_prj_weight_sharing=False
+            bidirectional=True,
+            trg_emb_prj_weight_sharing=False,
+            positional_encoding=False
         )
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])
 
-        print(sum([param.nelement() for param in self._model.parameters()]))
+        print("Parameters: ", sum([param.nelement() for param in self._model.parameters()]))
 
         #exit()
         # Loss
@@ -131,6 +134,9 @@ class Trainer:
             total_loss /= n_total_loss_values
             total_loss.backward()
 
+            # Gradient Clipping
+            torch.nn.utils.clip_grad_norm_(self._model.parameters(), 1.0)
+
             self._optimizer.step()
             
             self._writer.add_scalar("train/loss", total_loss.item(), (epoch-1) * len(self._train_dataloader) + i)
@@ -156,7 +162,7 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 5,
-        "epochs": 20,
+        "epochs": 70,
         "block_size": 20
     }
 

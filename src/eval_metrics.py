@@ -4,14 +4,13 @@ import tqdm
 import torch
 import os
 
-from typing import Dict
+from typing import Dict, List
 
 from src.dataloader import *
-from src.models import Transformer
+from src.models import LSTM
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
 from src.metrics import IMetric, BertScore, Bleu, Rouge
-import src.determinism
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -113,7 +112,7 @@ if __name__ == "__main__":
         "block_size": 20
     }
 
-    model = Transformer.from_params(config["model_params"])
+    model = LSTM.from_params(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 

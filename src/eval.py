@@ -6,6 +6,7 @@ import torch.nn as nn
 from typing import Dict
 from src.dataloader import get_eval_dataloader_weather_dataset
 from src.dummy_tokenizer import DummyTokenizer
+from src.models.lstm import LSTM
 from src.loss import CELoss
 from src.models import Transformer
 
@@ -89,12 +90,12 @@ if __name__ == "__main__":
         "model_weights": args.model_weights,
         "model_params": args.model_params,
         "cached": args.cache_data,
-        "model": "transformer", #args.model,
+        "model": "lstm", #args.model,
         "batch_size": 5,
         "block_size": 20
     }
 
-    model = Transformer.from_params(config["model_params"])
+    model = LSTM.from_params(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 
