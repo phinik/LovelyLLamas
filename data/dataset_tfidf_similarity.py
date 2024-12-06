@@ -87,7 +87,7 @@ def calculate_similarity(counts: Dict) -> np.array:
     return similarities
 
 
-def calculate_mean_top_10_similarity(similarities: np.array) -> np.array:
+def calculate_mean_top_x_similarity(x: int, similarities: np.array) -> np.array:
     # diag elements are always 1 as they represent the cosine similarity of a report with itself. hence, we set the 
     # diagonal elements to zero.
     similarities = similarities - np.diag(np.diag(similarities))
@@ -97,7 +97,7 @@ def calculate_mean_top_10_similarity(similarities: np.array) -> np.array:
     
     # compute the mean of the 10 highest similarity values for each report (excluding the similarity of the report with
     # itself)
-    return np.mean(sorted_sims[:, -11:-1], axis=1)
+    return np.mean(sorted_sims[:, -(x+1):-1], axis=1)
 
 
 if __name__ == "__main__":
@@ -114,11 +114,11 @@ if __name__ == "__main__":
     print("similarity")
     similarities = calculate_similarity(counts)
     
-    mean_top_10_similarity = calculate_mean_top_10_similarity(similarities)
-    print(mean_top_10_similarity)
+    mean_top_x_similarity = calculate_mean_top_x_similarity(50, similarities)
+    print(mean_top_x_similarity)
 
-    plt.hist(mean_top_10_similarity, bins=np.arange(0, 1.025, 0.025))
-    print(np.mean(mean_top_10_similarity))
+    plt.hist(mean_top_x_similarity, bins=np.arange(0, 1.025, 0.025))
+    print(np.mean(mean_top_x_similarity))
     #plt.imshow(np.log(similarities+1))
     #ax = plt.gca()
     #ax.set_yscale("log")
