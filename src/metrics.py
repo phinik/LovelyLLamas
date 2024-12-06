@@ -152,6 +152,9 @@ class BertScore(IMetric):
         # Hence, no matter what idf-dict is provided, the same scores result and these scores are identical to the ones
         # obtained by simply setting idf=True. Since only one reference sentence is provided each time, we do not use 
         # idf-scores because they are only computed based in this one single reference.
+        #
+        # 'lang="de"' is equal to 'model_type="bert-base-multilingual-cased"'
+        # (at least the resulting scores are the same)
         scores = self._scorer.compute(predictions=[prediction], references=[label], lang="de")
 
         self._scores_f1.append(scores["f1"])
