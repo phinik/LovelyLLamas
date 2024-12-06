@@ -119,7 +119,8 @@ if __name__ == "__main__":
 
     plt.hist(mean_top_x_similarity, bins=np.arange(0, 1.025, 0.025))
     print(np.mean(mean_top_x_similarity))
-    #plt.imshow(np.log(similarities+1))
-    #ax = plt.gca()
-    #ax.set_yscale("log")
+    plt.ylabel("Counts", fontsize=18)
+    plt.xlabel("Mean Top 50 Cosine Similarity (TF-IDF)", fontsize=18)
+    ax = plt.gca()
+    ax.tick_params(axis='both', which='major', labelsize=14)
     plt.show()
