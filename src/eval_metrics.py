@@ -101,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--metrics", nargs="+", choices=["bertscore", "bleu", "rouge"], type=str, help="", required=True)
+    parser.add_argument("--output_filename", type=str, help="If output shall be saved to a different file than the standard file")
     
     args = parser.parse_args()
     
@@ -132,6 +133,10 @@ if __name__ == "__main__":
     results = generator.evaluate(model)
 
     out_dir = os.path.dirname(config["model_weights"])
-    filename = f"eval_{os.path.splitext(os.path.split(config['model_weights'])[1])[0]}.json"
+    
+    if args.output_filename is not None:
+        filename = f"{args.output_filename}.json"
+    else:
+        filename = f"eval_{os.path.splitext(os.path.split(config['model_weights'])[1])[0]}.json"
     with open(os.path.join(out_dir, filename), "w") as f:
         json.dump(results, f, indent=4)
