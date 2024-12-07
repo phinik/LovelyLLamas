@@ -9,7 +9,7 @@ class Tokenizer:
         :param model_name: Name of the pre-trained BERT model.
         """
         self._tokenizer = BertTokenizer.from_pretrained(model_name)
-        self._tokenizer.add_tokens(["<degC>", "<l_per_sqm>", "<kmh>", "<percent>"], special_tokens=False)
+        self._tokenizer.add_tokens(["<degC>", "<l_per_sqm>", "<kmh>", "<percent>", "<city>"], special_tokens=False)
         self._tokenizer.add_tokens(["<start>", "<stop>", "<padding>", ], special_tokens=True)
 
         # Special token IDs
