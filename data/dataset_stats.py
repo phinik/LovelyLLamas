@@ -95,6 +95,31 @@ def determine_report_sentence_lengths(dataset: str) -> List[int]:
     return lengths   
 
 
+def determine_amount_of_nans_in_context(dataset: str) -> float:
+    dirs = ["train", "eval", "test"]
+    for dir in dirs:
+        dir_path = os.path.join(dataset, dir)
+        
+        files = os.listdir(dir_path)
+        n_tot = 0
+        n_nan = 0
+        for file in files:
+            with open(os.path.join(dir_path, file), "r") as f:
+                file_content = json.load(f)
+            
+            keys = [
+                "clearness", "temperatur_in_deg_C", "niederschlagsrisiko_in_perc", "niederschlagsmenge_in_l_per_sqm", 
+                "windrichtung", "windgeschwindigkeit_in_km_per_s", "bewölkungsgrad"
+                ]
+            
+            for key in keys:
+                n_tot += len(file_content[key])
+                n_nan += len([v for v in file_content[key] if v in ["None", "none", None, "nan", "NaN", "Nan"]])
+                #print([v for v in file_content[key] if v in ["None", "none", None, "nan", "NaN", "Nan"]])
+                
+    return n_nan / n_tot
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True)
@@ -115,6 +140,9 @@ if __name__ == "__main__":
 
     report_sentence_length = determine_report_sentence_lengths(args.dataset)
     print("Report avg sentence length: ", np.mean(report_sentence_length))
+
+    amount_of_nans = determine_amount_of_nans_in_context(args.dataset)
+    print("Fraction of nans: ", amount_of_nans)
 
     plt.hist(reports_lengths, bins=20)
     plt.show()
