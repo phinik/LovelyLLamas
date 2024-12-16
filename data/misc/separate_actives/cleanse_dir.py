@@ -41,5 +41,5 @@ def cleanse_folder(folder_path: str):
 
 # Example usage
 if __name__ == "__main__":
-    folder_to_cleanse = f"{os.getcwd()}/data/2024-11-19/"
+    folder_to_cleanse = f"{os.getcwd()}/data/2024-12-12/"
     cleanse_folder(folder_to_cleanse)
