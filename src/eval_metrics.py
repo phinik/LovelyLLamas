@@ -25,6 +25,7 @@ class Evaluator:
         self._test_dataloader = get_eval_dataloader_weather_dataset(
             path=self._config["dataset"], 
             batch_size=1,
+            num_workers=self._config["num_workers"],
             cached=self._config["cached"]
         )
 
@@ -113,7 +114,8 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": "transformer", #args.model,
         "block_size": 20,
-        "tokenizer": args.tokenizer
+        "tokenizer": args.tokenizer,
+        "num_workers": 1
     }
 
     model = Transformer.from_params(config["model_params"])

@@ -29,6 +29,7 @@ class Trainer:
         self._train_dataloader = get_train_dataloader_weather_dataset(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
+            num_workers=self._config["num_workers"],
             cached=self._config["cached"]
         )
 
@@ -36,19 +37,16 @@ class Trainer:
         self._context_tokenizer = DummyTokenizer(self._config["dataset"])
         self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
 
-        # Model --> Default has 44.497.920 parameters!
-        self._model = Transformer(
-            n_src_vocab=self._context_tokenizer.size_context_vocab, 
-            n_trg_vocab=self._target_tokenizer.vocab_size, 
-            src_pad_idx=self._context_tokenizer.padding_idx_context, 
-            trg_pad_idx=self._target_tokenizer.padding_idx,
-            emb_src_trg_weight_sharing=False,
-            n_head=4,
-            n_layers=2,
-            d_inner=512, # 512
-            d_model=256,
-            d_word_vec=256
-        )
+        with open(self._config["model_config"], "r") as f:
+            c = json.load(f)
+            
+        c["n_src_vocab"] = self._context_tokenizer.size_context_vocab
+        c["n_trg_vocab"] = self._target_tokenizer.vocab_size 
+        c["src_pad_idx"] = self._context_tokenizer.padding_idx_context
+        c["trg_pad_idx"] = self._target_tokenizer.padding_idx
+        
+        self._model = Transformer(**c)
+
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])        
         print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
@@ -150,6 +148,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
+    parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+
     
     args = parser.parse_args()
     
@@ -163,7 +164,9 @@ if __name__ == "__main__":
         "batch_size": 10,
         "epochs": 40,
         "block_size": 20,
-        "tokenizer": args.tokenizer
+        "tokenizer": args.tokenizer,
+        "model_config": args.model_config,
+        "num_workers": args.num_workers
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)

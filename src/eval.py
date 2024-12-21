@@ -23,6 +23,7 @@ class Evaluator:
         self._eval_dataloader = get_eval_dataloader_weather_dataset(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
+            num_workers=self._config["num_workers"],
             cached=self._config["cached"]
         )
 
@@ -85,6 +86,7 @@ if __name__ == "__main__":
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
     
     args = parser.parse_args()
         
@@ -96,7 +98,8 @@ if __name__ == "__main__":
         "model": "transformer", #args.model,
         "batch_size": 5,
         "block_size": 20,
-        "tokenizer": args.tokenizer
+        "tokenizer": args.tokenizer,
+        "num_workers": args.num_workers
     }
 
     model = Transformer.from_params(config["model_params"])
