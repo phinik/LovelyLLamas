@@ -61,21 +61,40 @@ class Evaluator:
             # concatenated.
             context = torch.concat(context)
 
-            # Move tensors 
-            targets = targets.to(device=DEVICE)
-            context = context.to(device=DEVICE)
-            
-            for j in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, j:j+self._config["block_size"]]
-                labels = targets[:, j+1:j+1+self._config["block_size"]]
+            # Create batch
+            batch = self._batchify(context, targets, self._config["block_size"])
 
-                prediction = model(context, inputs)
+            # Move tensors 
+            context = batch["context"].to(device=DEVICE)
+            inputs = batch["inputs"].to(device=DEVICE)
+            labels = batch["labels"].to(device=DEVICE)
+            
+            prediction = model(context, inputs)
                 
-                total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
-                labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
-                total_loss += self._loss(prediction, labels)
+            total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+            labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+            total_loss += self._loss(prediction, labels)
                 
         return {"loss": (total_loss / total_loss_values).item()}
+
+    @staticmethod
+    def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
+        batch_inputs = []
+        batch_labels = []
+        batch_context = []
+        
+        for j in range(0, targets.shape[1] - block_size):
+            batch_inputs.append(targets[:, j:j+block_size])
+            batch_labels.append(targets[:, j+1:j+1+block_size])
+            batch_context.append(context)
+
+        batch = {
+            "context": torch.concat(batch_context),
+            "inputs": torch.concat(batch_inputs),
+            "labels": torch.concat(batch_labels)
+        }
+        
+        return batch
 
 
 if __name__ == "__main__":
@@ -96,7 +115,7 @@ if __name__ == "__main__":
         "model_params": args.model_params,
         "cached": args.cache_data,
         "model": "transformer", #args.model,
-        "batch_size": 5,
+        "batch_size": 10,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "num_workers": args.num_workers

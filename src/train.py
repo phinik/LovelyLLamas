@@ -11,7 +11,7 @@ from typing import Dict
 from src.best_model import BestModel, OptDirection
 from src.dataloader import *
 from src.loss import CELoss
-from src.models import Transformer
+from src.models import Transformer, Transformer
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
 from src.eval import Evaluator
@@ -51,13 +51,12 @@ class Trainer:
         self._model.save_params_to(self._config["checkpoints"])        
         print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
 
-        #exit()
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
-        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=10)  # TODO Patience auf 5 reduzieren
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)  # TODO Patience auf 5 reduzieren
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
@@ -111,31 +110,47 @@ class Trainer:
             # concatenated.
             context = torch.concat(context)
 
+            # Create batch
+            batch = self._batchify(context, targets, self._config["block_size"])
+
             # Move tensors 
-            targets = targets.to(device=DEVICE)
-            context = context.to(device=DEVICE)
-            
+            context = batch["context"].to(device=DEVICE)
+            inputs = batch["inputs"].to(device=DEVICE)
+            labels = batch["labels"].to(device=DEVICE)
+
             self._optimizer.zero_grad()
 
-            total_loss = 0
-            n_total_loss_values = 0
-            for j in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, j:j+self._config["block_size"]]
-                labels = targets[:, j+1:j+1+self._config["block_size"]]
+            prediction = self._model(context, inputs)
 
-                prediction = self._model(context, inputs)
-                
-                n_total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
-                labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
-                total_loss += self._loss(prediction, labels)
-                
-
-            total_loss /= n_total_loss_values
-            total_loss.backward()
+            n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+            labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+            
+            loss = self._loss(prediction, labels) / n_loss_values
+            loss.backward()
 
             self._optimizer.step()
             
-            self._writer.add_scalar("train/loss", total_loss.item(), (epoch-1) * len(self._train_dataloader) + i)
+            self._writer.add_scalar("train/loss", loss.item(), (epoch-1) * len(self._train_dataloader) + i)
+
+    @staticmethod
+    def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
+        batch_inputs = []
+        batch_labels = []
+        batch_context = []
+        
+        for j in range(0, targets.shape[1] - block_size):
+            batch_inputs.append(targets[:, j:j+block_size])
+            batch_labels.append(targets[:, j+1:j+1+block_size])
+            batch_context.append(context)
+
+        batch = {
+            "context": torch.concat(batch_context),
+            "inputs": torch.concat(batch_inputs),
+            "labels": torch.concat(batch_labels)
+        }
+        
+        return batch
+
 
 
 
