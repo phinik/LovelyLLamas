@@ -41,9 +41,9 @@ class WeatherDataset(Dataset):
 
         # just for test purposes
         if self._n_samples == -1:
-            self._full_path = os.path.join(self._path, f"{self._split.value[0]}.json")
+            self._full_path = os.path.join(self._path, f"dset_{self._split.value[0]}.json")
         else:
-            self._full_path = os.path.join(self._path, f"{self._split.value[0]}_{n_samples}.json")
+            self._full_path = os.path.join(self._path, f"dset_{self._split.value[0]}_{n_samples}.json")
 
         self._files = self._load_files(self._full_path)
 
