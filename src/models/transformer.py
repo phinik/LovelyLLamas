@@ -78,6 +78,9 @@ class Transformer(nn.Module):
             out_features=self._params["tgt_vocab_size"]
         )
 
+        # Weight sharing between embedding and final projection
+        self._final_projection.weight = self._tgt_word_emb.weight
+
     def forward(self, src_seq, tgt_seq):
         src_pad_mask = self._get_pad_mask(src_seq, self._params["src_pad_idx"])
         trg_pad_mask = self._get_pad_mask(tgt_seq, self._params["tgt_pad_idx"])
@@ -102,6 +105,10 @@ class Transformer(nn.Module):
 
         return x.view(-1, self._params["tgt_vocab_size"])
 
+    @property
+    def name(self):
+        return "OG Transformer"
+    
     def save_weights_as(self, dir: str, filename: str):
         torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
