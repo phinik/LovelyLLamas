@@ -8,7 +8,12 @@ class TestWeatherDataset(unittest.TestCase):
     def test_correct_path_results(self):
         dset = WeatherDataset("./test_weather_dataset", Split.EVAL, TransformationPipeline([]))
 
-        self.assertEqual("./test_weather_dataset/eval", dset._full_path)
+        self.assertEqual("./test_weather_dataset/eval.json", dset._full_path)
+
+    def test_correct_path_results_with_n_samples(self):
+        dset = WeatherDataset("./test_weather_dataset", Split.EVAL, TransformationPipeline([]), n_samples=2)
+
+        self.assertEqual("./test_weather_dataset/eval_2.json", dset._full_path)
 
     def test_correct_number_of_files_if_not_cached(self):
         dset = WeatherDataset("./test_weather_dataset", Split.EVAL, TransformationPipeline([]))

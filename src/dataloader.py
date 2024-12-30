@@ -5,7 +5,13 @@ from src.dataset import WeatherDataset, Split, TransformationPipeline
 from src.data_preprocessing import *
 
 
-def get_train_dataloader_weather_dataset(path: str, batch_size: int, num_workers: int, cached: bool) -> DataLoader:
+def get_train_dataloader_weather_dataset(
+        path: str, 
+        batch_size: int, 
+        num_workers: int, 
+        cached: bool, 
+        n_samples: int = -1
+    ) -> DataLoader:
     dset = WeatherDataset(
         path=path, 
         split=Split.TRAIN, 
@@ -16,7 +22,8 @@ def get_train_dataloader_weather_dataset(path: str, batch_size: int, num_workers
             AssembleCustomOverview(),
             ReduceKeys()
         ]),
-        cached=cached
+        cached=cached,
+        n_samples=n_samples
     )
 
     return DataLoader(dset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
