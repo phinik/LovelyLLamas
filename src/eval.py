@@ -43,7 +43,7 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short"]
+            targets = batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
