@@ -11,7 +11,7 @@ from typing import Dict
 from src.best_model import BestModel, OptDirection
 from src.dataloader import *
 from src.loss import CELoss
-from src.models import Transformer, Transformer
+from src.models import Transformer, RoPETransformer
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
 from src.eval import Evaluator
@@ -40,15 +40,17 @@ class Trainer:
         with open(self._config["model_config"], "r") as f:
             c = json.load(f)
             
-        c["n_src_vocab"] = self._context_tokenizer.size_context_vocab
-        c["n_trg_vocab"] = self._target_tokenizer.vocab_size 
+        c["src_vocab_size"] = self._context_tokenizer.size_context_vocab
+        c["tgt_vocab_size"] = self._target_tokenizer.vocab_size 
         c["src_pad_idx"] = self._context_tokenizer.padding_idx_context
-        c["trg_pad_idx"] = self._target_tokenizer.padding_idx
+        c["tgt_pad_idx"] = self._target_tokenizer.padding_idx
+        #c["dropout"] = 0
         
         self._model = Transformer(**c)
 
         self._model.to(DEVICE)
-        self._model.save_params_to(self._config["checkpoints"])        
+        self._model.save_params_to(self._config["checkpoints"])   
+        print(f" [MODEL] {self._model.name}")     
         print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
 
         # Loss
@@ -92,7 +94,7 @@ class Trainer:
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short"]
+            targets = batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
@@ -148,6 +150,8 @@ class Trainer:
             "inputs": torch.concat(batch_inputs),
             "labels": torch.concat(batch_labels)
         }
+
+        
         
         return batch
 
@@ -177,7 +181,7 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 10,
-        "epochs": 40,
+        "epochs": 50,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
