@@ -8,7 +8,7 @@ import os
 from typing import Dict
 
 from src.dataloader import *
-from src.models import Transformer
+from src.models import TransformerFactory
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
 from src.metrics import IMetric, BertScore, Bleu, Rouge
@@ -41,7 +41,7 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"].copy()
-            targets = batch["report_short"].copy()
+            targets = batch["report_short_wout_boeen"].copy()
 
             # Tokenize
             for j in range(len(context)):
@@ -83,7 +83,7 @@ class Evaluator:
                 k += 1
             
             for metric in self._metrics:
-                metric.update(self._target_tokenizer.itos(token_sequence), batch['report_short'][0])
+                metric.update(self._target_tokenizer.itos(token_sequence), batch['report_short_wout_boeen'][0])
 
         results = {}
         for metric in self._metrics:
@@ -98,7 +98,6 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--metrics", nargs="+", choices=["bertscore", "bleu", "rouge"], type=str, help="", required=True)
@@ -112,13 +111,12 @@ if __name__ == "__main__":
         "model_weights": args.model_weights,
         "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
         "cached": args.cache_data,
-        "model": "transformer", #args.model,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "num_workers": 1
     }
 
-    model = Transformer.from_params(config["model_params"])
+    model = TransformerFactory.from_dict(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 

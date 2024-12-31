@@ -9,6 +9,8 @@ from typing import Dict
 
 
 class Transformer(nn.Module):
+    NAME = "OG Transformer"
+
     def __init__(
             self, 
             src_vocab_size, 
@@ -39,7 +41,8 @@ class Transformer(nn.Module):
             "activation": activation,
             "n_position": n_position,
             "norm_first": True,
-            "batch_first": True
+            "batch_first": True,
+            "name": self.NAME
         }
 
         self._src_word_emb = nn.Embedding(
@@ -107,7 +110,7 @@ class Transformer(nn.Module):
 
     @property
     def name(self):
-        return "OG Transformer"
+        return self.NAME
     
     def save_weights_as(self, dir: str, filename: str):
         torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
