@@ -22,21 +22,13 @@ class EarlyStopping:
         
     def update(self, metric_value: Any, epoch: int) -> bool:
         if self._current_model_is_better(metric_value):            
-            self._reset_patience(metric_value, epoch)
-            
-            print(" [EARLY STOPPING]: reset")
-            
+            self._reset_patience(metric_value, epoch)            
             return False
-        
+
         elif self._patience_is_triggered(epoch):
-            self._save_early_stopping_note(epoch)
-            
-            print(" [EARLY STOPPING]: triggered")
-            
+            self._save_early_stopping_note(epoch)           
             return True
-        
-        print(f" [EARLY STOPPING]: waiting {epoch - self._best_value_epoch} / {self._patience}")
-        
+                
         return False  # Case: current model is not better, but patience has not been triggered yet
 
     def _current_model_is_better(self, metric_value: Any) -> bool:
