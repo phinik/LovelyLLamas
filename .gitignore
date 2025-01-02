@@ -20,7 +20,6 @@ wheels/
 .installed.cfg
 *.egg
 get-pip.py
-data/creativity_preprocessing
 
 # Cython
 *.c
@@ -31,7 +30,6 @@ data/creativity_preprocessing
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
-data/files_for_chatGPT/batches
 
 # Environment
 .env
