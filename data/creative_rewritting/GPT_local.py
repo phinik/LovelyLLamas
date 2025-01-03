@@ -9,27 +9,13 @@ if model.tokenizer.pad_token is None:
     model.tokenizer.pad_token = model.tokenizer.eos_token  # Set pad_token to eos_token
 city = 'Abeïd'
 weather_report = "In Abeïd strahlt am Tag die Sonne und die Temperaturen liegen zwischen 16 und 26°C. In der Nacht ist der Himmel bedeckt bei Werten von 16°C. Böen können Geschwindigkeiten zwischen 22 und 42 km/h erreichen."
+
 # Improved input prompt
 input_text = [
 f'''Du bist ein professioneller Autor, welcher Wetterberichte und Flachwitze schreibt. Nun möchtest du beides kombinieren und deine Wetterberichte in lustige, und durchaus
 etwas unseriös klingende Wetterberichte verwandeln. Schreibe bitte folgenden Wetterbericht um:
 {weather_report}'''
 ]
-# , der eine fesselnde Erzählung über die Wetterbedingungen in {city} gestaltet.
-
-# Aufgabe: Schreibe eine lebendige, konversative Beschreibung, die das Wesen des Wetters einfängt. Beinhalte:
-
-# Atmosphärische Beschreibung
-# Temperatur- und Sonnenlichtdetails
-# Windcharakteristiken
-# Vorgeschlagene Aktivitäten im Freien
-# Stimmung/Gefühl des Tages
-
-# Stil: Lokaler Nachrichtenblog-Beitrag mit einem freundlichen, beschreibenden Ton. Priorisiere Immersion und Nachvollziehbarkeit.
-# Ursprünglicher Wetterbericht:
-# {weather_report}
-# Deine Erzählung:'''
-# ]
 
 # Set the length dynamically for input and output
 MAX_LENGTH = len(input_text[0])  # Adjust based on typical input length
