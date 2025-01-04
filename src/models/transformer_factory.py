@@ -1,0 +1,33 @@
+import json
+
+from typing import Dict
+
+from .transformer import Transformer
+from .transformer_rope import RoPETransformer
+
+
+class TransformerFactory:
+    def __init__(self):
+        ...
+
+    @staticmethod
+    def from_dict(model_type: str, params: Dict):
+        if model_type == "og_transformer":
+            return Transformer(**params)
+        elif model_type == "rope_transformer":
+            return RoPETransformer(**params)
+        else:
+            raise KeyError(f"Unkonwn 'model_type' {model_type}")
+        
+    @staticmethod
+    def from_file(path: str):
+        with open(path, "r") as f:
+            config = json.load(f)
+            model_type = config["name"]
+
+        if model_type == Transformer.NAME:
+            return Transformer.from_params(path)
+        elif model_type == RoPETransformer.NAME:
+            return RoPETransformer.from_params(path)
+        else:
+            raise KeyError(f"Unkonwn 'model_type' {model_type}")

@@ -1,6 +1,3 @@
-import json
-import os
-
 from transformers import BertTokenizer
 from typing import List
 
@@ -12,8 +9,8 @@ class Tokenizer:
         :param model_name: Name of the pre-trained BERT model.
         """
         self._tokenizer = BertTokenizer.from_pretrained(model_name)
-        self._tokenizer.add_tokens(["<degC>", "<l_per_sqm>", "<kmh>", "<percent>"], special_tokens=False)
-        self._tokenizer.add_tokens(["<start>", "<stop>", "<padding>", ], special_tokens=True)
+        self._tokenizer.add_tokens(["<degC>", "<l_per_sqm>", "<kmh>", "<percent>", "<city>"], special_tokens=False)
+        self._tokenizer.add_tokens(["<start>", "<stop>", "<padding>"], special_tokens=True)
 
         # Special token IDs
         self._padding_idx = self._tokenizer.convert_tokens_to_ids("<padding>")

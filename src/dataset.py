@@ -25,16 +25,27 @@ class Split(Enum):
 
 
 class WeatherDataset(Dataset):
-    def __init__(self, path: str, split: Split, transformations: TransformationPipeline, cached: bool = False):
+    def __init__(
+            self, 
+            path: str, 
+            split: Split, 
+            transformations: TransformationPipeline, 
+            cached: bool = False, 
+            n_samples: int = -1
+        ):
         self._path = path
         self._split = split
         self._transforms = transformations
         self._cached = cached
+        self._n_samples = n_samples
 
         # just for test purposes
-        self._full_path = os.path.join(self._path, self._split.value[0])
+        if self._n_samples == -1:
+            self._full_path = os.path.join(self._path, f"dset_{self._split.value[0]}.json")
+        else:
+            self._full_path = os.path.join(self._path, f"dset_{self._split.value[0]}_{n_samples}.json")
 
-        self._files = os.listdir(self._full_path)
+        self._files = self._load_files(self._full_path)
 
         self._cached_data = None
         if self._cached:
@@ -52,6 +63,11 @@ class WeatherDataset(Dataset):
 
             return data
     
+    @staticmethod
+    def _load_files(path: str) -> List[str]:
+        with open(path, "r") as f:
+            return json.load(f)
+        
     def _cache_data(self) -> List[Dict]:
         cached_data = []
 
@@ -62,8 +78,8 @@ class WeatherDataset(Dataset):
             
         return cached_data
 
-    def _load_data_from_file(self, filename: str) -> Dict:
-        file_path = os.path.join(self._full_path, filename)
+    def _load_data_from_file(self, file_path: str) -> Dict:
+        file_path = os.path.join(self._path, file_path)
         
         with open(file_path, 'r') as f:
             data = json.load(f)
