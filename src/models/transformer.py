@@ -58,7 +58,6 @@ class Transformer(nn.Module):
         )
         
         self._pos_enc = PositionalEncoding(self._params["d_model"])
-        self._dropout = nn.Dropout(self._params["dropout"])
 
         self._model = nn.Transformer(
             d_model=self._params["d_model"],

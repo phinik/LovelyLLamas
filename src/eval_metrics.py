@@ -116,7 +116,7 @@ if __name__ == "__main__":
         "num_workers": 1
     }
 
-    model = TransformerFactory.from_dict(config["model_params"])
+    model = TransformerFactory.from_file(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 

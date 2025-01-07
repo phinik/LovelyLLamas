@@ -59,9 +59,6 @@ class RoPETransformer(nn.Module):
             padding_idx=self._params["tgt_pad_idx"]
         )
         
-        self._pos_enc = PositionalEncoding(self._params["d_model"])
-        self._dropout = nn.Dropout(self._params["dropout"])
-
         self._model = nn.Transformer(
             d_model=self._params["d_model"],
             nhead=self._params["n_head"],
@@ -92,10 +89,8 @@ class RoPETransformer(nn.Module):
         trg_att_mask = self._get_tgt_mask(tgt_seq)
         
         src_emb = self._src_word_emb(src_seq)
-        #src_emb = self._pos_enc(src_emb)
 
         tgt_emb = self._tgt_word_emb(tgt_seq)
-        #tgt_emb = self._pos_enc(tgt_emb)
 
         x = self._model(
             src_emb, 
@@ -167,29 +162,6 @@ class DecoderFactory:
             norm=decoder_norm
         )
 
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, n_position: int = 200, dropout: float = 0.1):
-        super().__init__()
-        # Inspired by https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial6/Transformers_and_MHAttention.html (22/12/2024)
-        
-        self._dropout = nn.Dropout(p=dropout)
-        
-        pos_encoding = torch.zeros(n_position, d_model)  # POS x i
-        positions = torch.arange(0., n_position).unsqueeze(1)
-
-        denom = torch.pow(10000, torch.arange(0., d_model, 2) / d_model)
-
-        pos_encoding[:, 0::2] = torch.sin(positions * denom)
-        pos_encoding[:, 1::2] = torch.cos(positions * denom)
-
-        pos_encoding = pos_encoding.unsqueeze(0)
-        
-        self.register_buffer('pos_encoding', pos_encoding, persistent=False)
-        
-    def forward(self, x: torch.tensor) -> torch.tensor:
-        return self._dropout(x + self.pos_encoding[:,  :x.shape[1], :])
-    
 
 # The following classes were taken from https://pytorch.org/docs/stable/_modules/torch/nn/modules/transformer.html
 # (last accessed 23/12/2024) and modified to incorporate RoPE

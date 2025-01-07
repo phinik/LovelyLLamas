@@ -9,9 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 from typing import Dict
 
 from src.best_model import BestModel, OptDirection
+from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
 from src.loss import CELoss
-from src.models import Transformer, RoPETransformer
+from src.models import TransformerFactory
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import Tokenizer
 from src.eval import Evaluator
@@ -46,7 +47,7 @@ class Trainer:
         c["tgt_pad_idx"] = self._target_tokenizer.padding_idx
         #c["dropout"] = 0
         
-        self._model = Transformer(**c)
+        self._model = TransformerFactory.from_dict(self._config["model"], c)
 
         self._model.to(DEVICE)
         self._model.save_params_to(self._config["checkpoints"])   
@@ -58,7 +59,8 @@ class Trainer:
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
-        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)  # TODO Patience auf 5 reduzieren
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)
+        self._optimizer_steps = 0
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
@@ -68,6 +70,7 @@ class Trainer:
 
     def train(self):
         best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
+        early_stopping_by_loss = EarlyStopping(ESOptDirection.MINIMIZE, 10, self._config["checkpoints"])
 
         for epoch in range(1, self._config["epochs"] + 1):
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
@@ -86,6 +89,10 @@ class Trainer:
             self._model.save_weights_as(self._config["checkpoints"], f"checkpoint_epoch_{epoch}")
 
             best_model_by_loss.update(epoch, self._model, eval_dict["loss"])
+
+            if early_stopping_by_loss.update(eval_dict["loss"], epoch):
+                print(f" [EARLY STOPPING] Epoch {epoch} / {self._config['epochs']}")
+                break
 
         self._writer.close()
 
@@ -115,43 +122,84 @@ class Trainer:
             # Create batch
             batch = self._batchify(context, targets, self._config["block_size"])
 
-            # Move tensors 
-            context = batch["context"].to(device=DEVICE)
-            inputs = batch["inputs"].to(device=DEVICE)
-            labels = batch["labels"].to(device=DEVICE)
+            for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
+                # Move tensors 
+                #contexts = contexts.to(device=DEVICE)
+                #inputs = inputs.to(device=DEVICE)
+                #print(inputs.device, labels.device)
+                #print(inputs.storage().data_ptr(), labels.storage().data_ptr())
+                #exit()
+                #labels = labels.to(device=DEVICE)
 
-            self._optimizer.zero_grad()
+                self._optimizer.zero_grad()
 
-            prediction = self._model(context, inputs)
+                prediction = self._model(contexts, inputs)
 
-            n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
-            labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+                labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                
+                loss = self._loss(prediction, labels) / n_loss_values
+                loss.backward()
+
+                self._optimizer.step()
             
-            loss = self._loss(prediction, labels) / n_loss_values
-            loss.backward()
-
-            self._optimizer.step()
-            
-            self._writer.add_scalar("train/loss", loss.item(), (epoch-1) * len(self._train_dataloader) + i)
+                self._writer.add_scalar("train/loss", loss.item(), self._optimizer_steps)
+                self._optimizer_steps += 1
 
     @staticmethod
     def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
-        batch_inputs = []
-        batch_labels = []
-        batch_context = []
+        input_seqs = []
+        label_seqs = []
+        context_seqs = []
         
+        # Create the maximum amount of sequences from the data. Each sequence has length 'block_size' and sequences
+        # are shifted by one token each.
         for j in range(0, targets.shape[1] - block_size):
-            batch_inputs.append(targets[:, j:j+block_size])
-            batch_labels.append(targets[:, j+1:j+1+block_size])
-            batch_context.append(context)
+            input_seqs.append(targets[:, j:j+block_size])
+            label_seqs.append(targets[:, j+1:j+1+block_size])
+            context_seqs.append(context)
+
+        #print(targets[:, ::40].shape)
+        # Get tensors from the list of sequences
+        context = torch.concat(context_seqs)
+        inputs = torch.concat(input_seqs)
+        labels = torch.concat(label_seqs)
+
+        #print(labels.shape)
+
+        max_batch_size = 320
+        n_batches = context.shape[0] // max_batch_size + 1
+        actual_batch_size = context.shape[0] // n_batches
+        
+        # Permute sequences randomly
+        perm = torch.randperm(context.shape[0])
+        context_perm = context[perm, ...]
+        inputs_perm = inputs[perm, ...]
+        labels_perm = labels[perm, ...]
+
+        context_perm = context_perm.to(DEVICE)
+        inputs_perm = inputs_perm.to(DEVICE)
+        labels_perm = labels_perm.to(DEVICE)
+            
+        # Create batches of size 'actual_batch_size' from the permuted tensor of sequences
+        batched_contexts = []
+        batched_inputs = []
+        batched_labels = []
+        for i in range(n_batches-1):
+            batched_contexts.append(context_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
+            batched_inputs.append(inputs_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
+            batched_labels.append(labels_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
+
+        # If context.shape[0] is not divisible by n_batches, the last batch will have size 'actual_batch_size' + 1
+        batched_contexts.append(context_perm[(n_batches-1)*actual_batch_size : , ...])
+        batched_inputs.append(inputs_perm[(n_batches-1)*actual_batch_size : , ...])
+        batched_labels.append(labels_perm[(n_batches-1)*actual_batch_size : , ...])
 
         batch = {
-            "context": torch.concat(batch_context),
-            "inputs": torch.concat(batch_inputs),
-            "labels": torch.concat(batch_labels)
+            "context": batched_contexts,
+            "inputs": batched_inputs,
+            "labels": batched_labels
         }
-
-        
         
         return batch
 
@@ -160,11 +208,11 @@ class Trainer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", type=str, help="Name of the run")
-    parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
-    parser.add_argument("--checkpoints_path", type=str, help="Where to store checkpoints")
-    parser.add_argument("--tensorboard_path", type=str, help="Where to store tensorboard summary")
-    parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
+    parser.add_argument("--name", type=str, required=True, help="Name of the run")
+    parser.add_argument("--dataset_path", type=str, required=True, help="Path to dataset root")
+    parser.add_argument("--checkpoints_path", type=str, required=True, help="Where to store checkpoints")
+    parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
+    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
@@ -180,8 +228,8 @@ if __name__ == "__main__":
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
         "cached": args.cache_data,
         "model": args.model,
-        "batch_size": 10,
-        "epochs": 50,
+        "batch_size": 5,
+        "epochs": 30,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
