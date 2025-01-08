@@ -6,8 +6,22 @@ from typing import List, Dict, Union
 from tqdm import tqdm
 import spacy
 from multiprocessing import Pool, cpu_count
+
 # Load the German NLP model
 nlp = spacy.load("de_core_news_sm")
+
+# Dict for storing Stats
+stats = {
+    'clearness': (),
+    'temperatur_min': float('inf'),
+    'temperatur_max': -float('inf'),
+    'niederschlagsmenge_in_l_per_sqm_min': float('inf'),
+    'niederschlagsmenge_in_l_per_sqm_max': -float('inf'),
+    'windgeschwindigkeit_min': float('inf'),
+    'windgeschwindigkeit_max': -float('inf'),
+    'luftdruck_min': float('inf'),
+    'luftdruck_max': -float('inf'),
+}
 
 # Utility functions
 def remove_emojis(text: str) -> str:
@@ -68,6 +82,16 @@ def lemmatize_text(text: str) -> str:
     lemmatized_text = " ".join([token.lemma_ for token in doc])
     return lemmatized_text
 
+def gather_stats(data: Dict[str, Union[str, List]]) -> None:
+    temps = data.get('temperatur_in_deg_C', [])
+    if isinstance(temps, list) and len(temps) > 0:
+        temps = [int(temp) for temp in temps if str(temp).isdigit()]
+        if temps:
+            if max(temps) > stats['temperatur_max']:
+                stats['temperatur_max'] = max(temps)
+            if min(temps) < stats['temperatur_min']:
+                stats['temperatur_min'] = min(temps)
+
 # Dataloader
 def load_json_files(directory: str) -> List[Dict[str, Union[str, List]]]:
     data = []
@@ -86,7 +110,7 @@ def process_single_record(record: Dict[str, Union[str, List]]) -> List[str]:
     """Process a single JSON record and return its processed texts."""
     processed_texts = []
     city = record.get("city", "")
-    
+    gather_stats(record)
     if not city:
         return processed_texts
         
@@ -162,6 +186,7 @@ def main():
     train_tokenizer(processed_texts, model_prefix="weather_tokenizer")
 
     print("Tokenizer training complete.")
+    print(stats)
 
 if __name__ == "__main__":
     main()
