@@ -13,8 +13,8 @@ from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
 from src.loss import CELoss
 from src.models import TransformerFactory
-from src.dummy_tokenizer import DummyTokenizer
-from src.tokenizer import Tokenizer
+from src.set_of_words_tokenizer import SetOfWordsTokenizer
+from src.bert_tokenizer import BertTokenizer
 from src.eval import Evaluator
 import src.determinism
 
@@ -35,8 +35,8 @@ class Trainer:
         )
 
         # Tokenizer
-        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
-        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
+        self._context_tokenizer = SetOfWordsTokenizer(self._config["dataset"])
+        self._target_tokenizer = SetOfWordsTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else BertTokenizer()
 
         with open(self._config["model_config"], "r") as f:
             c = json.load(f)
@@ -101,7 +101,7 @@ class Trainer:
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short_wout_boeen"]
+            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
@@ -137,6 +137,7 @@ class Trainer:
 
                 n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
                 labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                #labels[labels == self._target_tokenizer.unknown_idx] = self._target_tokenizer.padding_idx
                 
                 loss = self._loss(prediction, labels) / n_loss_values
                 loss.backward()
@@ -167,7 +168,7 @@ class Trainer:
 
         #print(labels.shape)
 
-        max_batch_size = 320
+        max_batch_size = 512
         n_batches = context.shape[0] // max_batch_size + 1
         actual_batch_size = context.shape[0] // n_batches
         
@@ -217,6 +218,7 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
 
     
     args = parser.parse_args()
@@ -228,12 +230,13 @@ if __name__ == "__main__":
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
         "cached": args.cache_data,
         "model": args.model,
-        "batch_size": 5,
+        "batch_size": 10,
         "epochs": 30,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
-        "num_workers": args.num_workers
+        "num_workers": args.num_workers,
+        "target": args.target
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)

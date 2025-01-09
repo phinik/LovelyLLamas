@@ -6,10 +6,10 @@ import os
 
 from typing import Dict
 from src.dataloader import get_eval_dataloader_weather_dataset
-from src.dummy_tokenizer import DummyTokenizer
+from src.set_of_words_tokenizer import SetOfWordsTokenizer
 from src.loss import CELoss
 from src.models import TransformerFactory
-from src.tokenizer import Tokenizer
+from src.bert_tokenizer import BertTokenizer
 import src.determinism
 
 
@@ -29,8 +29,8 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
-        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
+        self._context_tokenizer = SetOfWordsTokenizer(self._config["dataset"])
+        self._target_tokenizer = SetOfWordsTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else BertTokenizer()
 
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
@@ -44,7 +44,7 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short_wout_boeen"]
+            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
@@ -75,6 +75,8 @@ class Evaluator:
                 
                 total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
                 labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                #labels[labels == self._target_tokenizer.unknown_idx] = self._target_tokenizer.padding_idx
+
                 total_loss += self._loss(prediction, labels)
                 
         return {"loss": (total_loss / total_loss_values).item()}
@@ -137,6 +139,8 @@ if __name__ == "__main__":
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
+
     
     args = parser.parse_args()
         
@@ -145,10 +149,11 @@ if __name__ == "__main__":
         "model_weights": args.model_weights,
         "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
         "cached": args.cache_data,
-        "batch_size": 5,
+        "batch_size": 10,
         "block_size": 20,
         "tokenizer": args.tokenizer,
-        "num_workers": args.num_workers
+        "num_workers": args.num_workers,
+        "target": args.target
     }
 
     model = TransformerFactory.from_file(config["model_params"])
