@@ -20,7 +20,7 @@ class SetOfWordsTokenizer(ITokenizer):
 
         self._target_tokens += self.SPECIAL_TOKENS
         self._target_tokens += self._extra_tokens
-        self._target_tokens = sorted(list(set(self._target_tokens).union(set(self._context_tokens))))
+        self._target_tokens = sorted(list(set(self._target_tokens)))
         
         self._stoi = {token: i for i, token in enumerate(self._target_tokens)}
         self._itos_targets = {i: token for token, i in self._stoi.items()}
