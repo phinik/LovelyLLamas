@@ -2,7 +2,10 @@ from transformers import BertTokenizer
 from typing import List
 
 
-class Tokenizer:
+from .itokenizer import ITokenizer
+
+
+class BertTokenizer(ITokenizer):
     def __init__(self, model_name: str = "bert-base-german-cased"):
         """
         Initializes the tokenizer using a pre-trained BERT model for German.
