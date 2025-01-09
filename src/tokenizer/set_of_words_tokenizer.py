@@ -9,7 +9,7 @@ from .itokenizer import ITokenizer
 
 
 class SetOfWordsTokenizer(ITokenizer):
-    SPECIAL_TOKENS = ["<city>", "<start>", "<stop>", "<unknown>", "<padding>", "<missing>"]
+    SPECIAL_TOKENS = ["<city>", "<start>", "<stop>", "<unknown>", "<padding>"]
 
     def __init__(self, dataset_path: str):
         super().__init__()
@@ -106,7 +106,7 @@ class SetOfWordsTokenizer(ITokenizer):
         return s
     
 
-class SetOfWordsTokenizerDefault(SetOfWordsTokenizer):
+class SetOfWordsTokenizerRepShort(SetOfWordsTokenizer):
     def __init__(self, dataset_path: str):
         self._mapping = {
             ".": "<point>",

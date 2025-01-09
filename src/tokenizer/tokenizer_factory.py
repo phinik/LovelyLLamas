@@ -1,7 +1,7 @@
 #from .bert_tokenizer import BertTokenizer
 from .bert_tokenizer_adapter import SubsetBertTokenizerRepShort, SubsetBertTokenizerGPT
 from .itokenizer import ITokenizer
-from .set_of_words_tokenizer import SetOfWordsTokenizerDefault, SetOfWordsTokenizerGPT
+from .set_of_words_tokenizer import SetOfWordsTokenizerRepShort, SetOfWordsTokenizerGPT
 
 
 class TokenizerFactory:
@@ -15,7 +15,7 @@ class TokenizerFactory:
 
         if tokenizer == "sow":
             if target == "default":
-                return SetOfWordsTokenizerDefault(dataset_path)
+                return SetOfWordsTokenizerRepShort(dataset_path)
             else:
                 return SetOfWordsTokenizerGPT(dataset_path)
         else:

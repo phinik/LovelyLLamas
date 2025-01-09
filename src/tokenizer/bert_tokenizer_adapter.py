@@ -79,7 +79,7 @@ class SubsetBertTokenizer(BertTokenizerAdapter):
         self._tokens.append(super().stop_idx)
         self._tokens.append(super().padding_idx)
         self._tokens.append(super().unknown_idx)
-        self._tokens = set(self._tokens)
+        self._tokens = sorted(list(set(self._tokens)))
 
         self._bert_to_subset_mapping = {token: idx for idx, token in enumerate(self._tokens)}
         self._subset_to_bert_mapping = {idx: token for token, idx in self._bert_to_subset_mapping.items()}

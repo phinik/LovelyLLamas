@@ -1,4 +1,5 @@
 from .bert_tokenizer_adapter import BertTokenizerAdapter
+from .context_tokenizer import ContextTokenizer
 from .itokenizer import ITokenizer
-from .set_of_words_tokenizer import SetOfWordsTokenizerDefault
+from .set_of_words_tokenizer import SetOfWordsTokenizerRepShort
 from .tokenizer_factory import TokenizerFactory
