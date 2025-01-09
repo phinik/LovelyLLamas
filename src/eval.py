@@ -6,7 +6,7 @@ import os
 
 from typing import Dict
 from src.dataloader import get_eval_dataloader_weather_dataset
-from src.tokenizer import SetOfWordsTokenizerDefault, TokenizerFactory
+from src.tokenizer import TokenizerFactory, ContextTokenizer
 from src.loss import CELoss
 from src.models import TransformerFactory
 import src.determinism
@@ -29,7 +29,7 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._context_tokenizer = SetOfWordsTokenizerDefault(self._config["dataset"])
+        self._context_tokenizer = ContextTokenizer(self._config["dataset"])
         self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
         # Loss
@@ -48,7 +48,7 @@ class Evaluator:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
                 targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.

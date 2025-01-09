@@ -9,7 +9,7 @@ from typing import Dict
 
 from src.dataloader import *
 from src.models import TransformerFactory
-from src.tokenizer import SetOfWordsTokenizerDefault, TokenizerFactory
+from src.tokenizer import ContextTokenizer, TokenizerFactory
 from src.metrics import IMetric, BertScore, Bleu, Rouge
 import src.determinism
 
@@ -29,7 +29,7 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._context_tokenizer = SetOfWordsTokenizerDefault(self._config["dataset"])
+        self._context_tokenizer = ContextTokenizer(self._config["dataset"])
         self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
         
         self._metrics = metrics
@@ -44,7 +44,7 @@ class Evaluator:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
                 targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             context = context[0]

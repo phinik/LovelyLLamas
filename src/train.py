@@ -13,7 +13,7 @@ from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
 from src.loss import CELoss
 from src.models import TransformerFactory
-from src.tokenizer import SetOfWordsTokenizerDefault, TokenizerFactory
+from src.tokenizer import TokenizerFactory, ContextTokenizer
 from src.eval import Evaluator
 from src import utils
 import src.determinism
@@ -35,15 +35,15 @@ class Trainer:
         )
 
         # Tokenizer
-        self._context_tokenizer = SetOfWordsTokenizerDefault(self._config["dataset"])
+        self._context_tokenizer = ContextTokenizer(self._config["dataset"])
         self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
         with open(self._config["model_config"], "r") as f:
             c = json.load(f)
             
-        c["src_vocab_size"] = self._context_tokenizer.size_context_vocab
+        c["src_vocab_size"] = self._context_tokenizer.vocab_size
         c["tgt_vocab_size"] = self._target_tokenizer.vocab_size 
-        c["src_pad_idx"] = self._context_tokenizer.padding_idx_context
+        c["src_pad_idx"] = self._context_tokenizer.padding_idx
         c["tgt_pad_idx"] = self._target_tokenizer.padding_idx
         
         self._model = TransformerFactory.from_dict(self._config["model"], c)
@@ -104,7 +104,7 @@ class Trainer:
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
+                context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
                 targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
