@@ -9,35 +9,23 @@ from .itokenizer import ITokenizer
 
 
 class SetOfWordsTokenizer(ITokenizer):
-    SPECIAL_TOKENS = ["<city>", "<start>", "<stop>", "<unknown>", "<padding>"]
+    _SPECIAL_TOKENS = ["<city>", "<start>", "<stop>", "<unknown>", "<padding>"]
 
-    def __init__(self, dataset_path: str):
+    def __init__(self, tokens_file: str, extra_tokens: List[str]):
         super().__init__()
 
-        self._dataset_path = dataset_path
+        self._tokens = self._load_tokens(tokens_file)
 
-        self._target_tokens = self._load_tokens(os.path.join(self._dataset_path, self._target_tokens_file))
-
-        self._target_tokens += self.SPECIAL_TOKENS
-        self._target_tokens += self._extra_tokens
-        self._target_tokens = sorted(list(set(self._target_tokens)))
+        self._tokens += self._SPECIAL_TOKENS
+        self._tokens += extra_tokens
+        self._tokens = sorted(list(set(self._tokens)))
         
-        self._stoi = {token: i for i, token in enumerate(self._target_tokens)}
-        self._itos_targets = {i: token for token, i in self._stoi.items()}
+        self._stoi = {token: i for i, token in enumerate(self._tokens)}
+        self._itos = {i: token for token, i in self._stoi.items()}
 
-    def _load_tokens(self, filename: str) -> List:
-        with open(os.path.join(self._dataset_path, filename), "r") as f:
+    def _load_tokens(self, tokens_file: str) -> List:
+        with open(tokens_file, "r") as f:
             return json.load(f)
-
-    @property
-    @abstractmethod
-    def _target_tokens_file(self) -> str:
-        ...
-
-    @property
-    @abstractmethod
-    def _extra_tokens(self) -> List[str]:
-        ...
 
     @abstractmethod
     def _insert_extra_tokens(self, s: str) -> str:
@@ -78,47 +66,40 @@ class SetOfWordsTokenizer(ITokenizer):
         return [self._stoi.get(x, self._stoi["<unknown>"]) for x in words]
     
     def itos(self, input: List[int]) -> str:        
-        words = [self._itos_targets[x] for x in input]
+        words = [self._itos[x] for x in input]
 
         s = " ".join(words)
-
         s = self._remove_extra_tokens(s)
 
         return s
     
 
 class SetOfWordsTokenizerRepShort(SetOfWordsTokenizer):
-    def __init__(self, dataset_path: str):
-        self._mapping = {
+    _MAPPING = {
             ".": "<point>",
             ",": "<comma>"
         }
-
-        super().__init__(dataset_path)
-
-    @property
-    def _target_tokens_file(self) -> str:
-        return "target_tokens.json"
-        
-    @property
-    def _extra_tokens(self) -> List[str]:
-        return list(self._mapping.values())
+    
+    def __init__(self, dataset_path: str):
+        super().__init__(
+            tokens_file=os.path.join(dataset_path, "target_tokens.json"),
+            extra_tokens=list(self._MAPPING.values())
+        )
 
     def _insert_extra_tokens(self, s: str) -> str:
-        for k, v in self._mapping.items():
+        for k, v in self._MAPPING.items():
             s = s.replace(k, f" {v}")
     
         return s
 
     def _remove_extra_tokens(self, s: str) -> str:
-        for k, v in self._mapping.items():
+        for k, v in self._MAPPING.items():
             s = s.replace(f" {v}", k)
             
         return s
 
 class SetOfWordsTokenizerGPT(SetOfWordsTokenizer):
-    def __init__(self, dataset_path: str):
-        self._mapping = {
+    _MAPPING = {
             ".": "<point>",
             ",": "<comma>",
             "!": "<exclamationMark>",
@@ -129,25 +110,21 @@ class SetOfWordsTokenizerGPT(SetOfWordsTokenizer):
             ")": " <closeBraket>",
             ";": " <semicolon>",
         }
-
-        super().__init__(dataset_path)
-
-    @property
-    def _target_tokens_file(self) -> str:
-        return "target_tokens_gpt_filtered.json"
-
-    @property
-    def _extra_tokens(self) -> List[str]:
-        return list(self._mapping.values())
+    
+    def __init__(self, dataset_path: str):
+        super().__init__(
+            tokens_file=os.path.join(dataset_path, "target_tokens_gpt_filtered.json"), 
+            extra_tokens=list(self._MAPPING.values())
+        )
 
     def _insert_extra_tokens(self, s: str) -> str:
-        for k, v in self._mapping.items():
+        for k, v in self._MAPPING.items():
             s = s.replace(k, f" {v}")
     
         return s
 
     def _remove_extra_tokens(self, s: str) -> str:
-        for k, v in self._mapping.items():
+        for k, v in self._MAPPING.items():
             s = s.replace(f" {v}", k)
 
         return s
