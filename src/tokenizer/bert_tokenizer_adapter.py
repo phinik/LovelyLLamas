@@ -63,10 +63,3 @@ class BertTokenizerAdapter(ITokenizer):
         :return: Decoded text string.
         """
         return self._tokenizer.decode(token_ids, skip_special_tokens=True)
-    
-
-if __name__ == "__main__":
-    tk = BertTokenizerAdapter()
-    print(tk.stoi("braaaaaaaaaaa"))
-    print(tk.itos(tk.stoi("blalalblabj")))
-    print(tk._tokenizer.unk_token_id)
