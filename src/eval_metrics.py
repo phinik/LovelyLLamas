@@ -9,8 +9,7 @@ from typing import Dict
 
 from src.dataloader import *
 from src.models import TransformerFactory
-from src.dummy_tokenizer import DummyTokenizer
-from src.tokenizer import Tokenizer
+from src.tokenizer import SetOfWordsTokenizerDefault, TokenizerFactory
 from src.metrics import IMetric, BertScore, Bleu, Rouge
 import src.determinism
 
@@ -30,8 +29,8 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
-        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
+        self._context_tokenizer = SetOfWordsTokenizerDefault(self._config["dataset"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
         
         self._metrics = metrics
 
@@ -41,12 +40,12 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"].copy()
-            targets = batch["report_short_wout_boeen"].copy()
+            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
                 context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._target_tokenizer.stoi("<start> " + targets[j] + " <stop>"))
+                targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             context = context[0]
             targets = targets[0]
@@ -82,8 +81,9 @@ class Evaluator:
                 
                 k += 1
             
+            target_str = "gpt_rewritten_cleaned" if self._config["target"] == "gpt" else "report_short_wout_boeen"
             for metric in self._metrics:
-                metric.update(self._target_tokenizer.itos(token_sequence), batch['report_short_wout_boeen'][0])
+                metric.update(self._target_tokenizer.itos(token_sequence), batch[target_str][0])
 
         results = {}
         for metric in self._metrics:
@@ -99,9 +99,11 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--metrics", nargs="+", choices=["bertscore", "bleu", "rouge"], type=str, help="", required=True)
     parser.add_argument("--output_filename", type=str, help="If output shall be saved to a different file than the standard file")
+    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
+
     
     args = parser.parse_args()
     
@@ -113,7 +115,8 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "block_size": 20,
         "tokenizer": args.tokenizer,
-        "num_workers": 1
+        "num_workers": 1,
+        "target": args.target
     }
 
     model = TransformerFactory.from_file(config["model_params"])

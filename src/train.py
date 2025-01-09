@@ -13,9 +13,9 @@ from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
 from src.loss import CELoss
 from src.models import TransformerFactory
-from src.set_of_words_tokenizer import SetOfWordsTokenizer
-from src.bert_tokenizer import BertTokenizer
+from src.tokenizer import SetOfWordsTokenizerDefault, TokenizerFactory
 from src.eval import Evaluator
+from src import utils
 import src.determinism
 
 
@@ -35,8 +35,8 @@ class Trainer:
         )
 
         # Tokenizer
-        self._context_tokenizer = SetOfWordsTokenizer(self._config["dataset"])
-        self._target_tokenizer = SetOfWordsTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else BertTokenizer()
+        self._context_tokenizer = SetOfWordsTokenizerDefault(self._config["dataset"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
         with open(self._config["model_config"], "r") as f:
             c = json.load(f)
@@ -45,7 +45,6 @@ class Trainer:
         c["tgt_vocab_size"] = self._target_tokenizer.vocab_size 
         c["src_pad_idx"] = self._context_tokenizer.padding_idx_context
         c["tgt_pad_idx"] = self._target_tokenizer.padding_idx
-        #c["dropout"] = 0
         
         self._model = TransformerFactory.from_dict(self._config["model"], c)
 
@@ -106,7 +105,7 @@ class Trainer:
             # Tokenize
             for j in range(len(context)):
                 context[j] = torch.tensor(self._context_tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._target_tokenizer.stoi("<start> " + targets[j] + " <stop>"))
+                targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -120,7 +119,7 @@ class Trainer:
             context = torch.concat(context)
 
             # Create batch
-            batch = self._batchify(context, targets, self._config["block_size"])
+            batch = utils.batchify(context, targets, self._config["block_size"], DEVICE)
 
             for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
                 # Move tensors 
@@ -147,65 +146,6 @@ class Trainer:
                 self._writer.add_scalar("train/loss", loss.item(), self._optimizer_steps)
                 self._optimizer_steps += 1
 
-    @staticmethod
-    def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
-        input_seqs = []
-        label_seqs = []
-        context_seqs = []
-        
-        # Create the maximum amount of sequences from the data. Each sequence has length 'block_size' and sequences
-        # are shifted by one token each.
-        for j in range(0, targets.shape[1] - block_size):
-            input_seqs.append(targets[:, j:j+block_size])
-            label_seqs.append(targets[:, j+1:j+1+block_size])
-            context_seqs.append(context)
-
-        #print(targets[:, ::40].shape)
-        # Get tensors from the list of sequences
-        context = torch.concat(context_seqs)
-        inputs = torch.concat(input_seqs)
-        labels = torch.concat(label_seqs)
-
-        #print(labels.shape)
-
-        max_batch_size = 512
-        n_batches = context.shape[0] // max_batch_size + 1
-        actual_batch_size = context.shape[0] // n_batches
-        
-        # Permute sequences randomly
-        perm = torch.randperm(context.shape[0])
-        context_perm = context[perm, ...]
-        inputs_perm = inputs[perm, ...]
-        labels_perm = labels[perm, ...]
-
-        context_perm = context_perm.to(DEVICE)
-        inputs_perm = inputs_perm.to(DEVICE)
-        labels_perm = labels_perm.to(DEVICE)
-            
-        # Create batches of size 'actual_batch_size' from the permuted tensor of sequences
-        batched_contexts = []
-        batched_inputs = []
-        batched_labels = []
-        for i in range(n_batches-1):
-            batched_contexts.append(context_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
-            batched_inputs.append(inputs_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
-            batched_labels.append(labels_perm[i*actual_batch_size : (i+1)*actual_batch_size, ...])
-
-        # If context.shape[0] is not divisible by n_batches, the last batch will have size 'actual_batch_size' + 1
-        batched_contexts.append(context_perm[(n_batches-1)*actual_batch_size : , ...])
-        batched_inputs.append(inputs_perm[(n_batches-1)*actual_batch_size : , ...])
-        batched_labels.append(labels_perm[(n_batches-1)*actual_batch_size : , ...])
-
-        batch = {
-            "context": batched_contexts,
-            "inputs": batched_inputs,
-            "labels": batched_labels
-        }
-        
-        return batch
-
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -215,12 +155,11 @@ if __name__ == "__main__":
     parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
     parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
     parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
 
-    
     args = parser.parse_args()
     
     config = {
