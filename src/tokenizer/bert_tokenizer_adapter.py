@@ -24,6 +24,7 @@ class BertTokenizerAdapter(ITokenizer):
         self._padding_idx = self._tokenizer.convert_tokens_to_ids("<padding>")
         self._start_idx = self._tokenizer.convert_tokens_to_ids("<start>")
         self._stop_idx = self._tokenizer.convert_tokens_to_ids("<stop>")
+        self._unknown_idx = self._tokenizer.convert_tokens_to_ids("[UNK]")
     
     @property
     def padding_idx(self) -> int:
@@ -42,7 +43,7 @@ class BertTokenizerAdapter(ITokenizer):
     
     @property
     def unknown_idx(self) -> int:
-        self._tokenizer.unk_token_id
+        return self._unknown_idx
 
     @property
     def vocab_size(self) -> int:
