@@ -7,25 +7,42 @@ import matplotlib.pyplot as plt
 from typing import List, Dict
 
 
-def load_reports(dataset: str) -> List[str]:
+def load_filenames(dataset: str) -> List[str]:
+    input_files = ["dset_train.json", "dset_eval.json", "dset_test.json"]
+    
+    files = []
+    for file in input_files:
+        path = os.path.join(dataset, file)
+        with open(path, "r") as f:
+            files += list(json.load(f))
+
+    return files
+
+
+def load_reports(dataset: str, files: List[str]) -> List[str]:
     reports = []
 
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
+    for file in files:
+        path = os.path.join(dataset, file)
         
-        files = os.listdir(dir_path)
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
+        with open(os.path.join(path), "r") as f:
+            file_content = json.load(f)
             
-            report = file_content["report_short"]
-            report = report.replace(file_content["city"], "<city>")
-            report = report.replace("°C", "")
-            report = report.replace("km/h", "")
-            report = report.replace(".", "")
+        # report = file_content["report_short_wout_boeen"]
+        # report = report.replace(file_content["city"], "<city>")
+        # report = report.replace("°C", "")
+        # report = report.replace("km/h", "")
+        # report = report.replace(".", "")
+        # report = report.replace(",", "")
 
-            reports.append(report)
+        report = file_content["gpt_rewritten_cleaned"]
+        report = report.replace(file_content["city"], "<city>")
+        for symbol in [".", ",", ";", "!", "?", ":"]:
+            report = report.replace(symbol, "")
+        report = report.replace("°C", "")
+        report = report.replace("km/h", "")
+
+        reports.append(report)
 
     return reports    
 
@@ -48,6 +65,14 @@ def count_occurances(reports: List[str]) -> Dict:
         # update term in documents counts
         for word in report_tf_counts.keys():
             idf_counts[word] = idf_counts.get(word, 0) + 1
+
+    for word, count in idf_counts.copy().items():
+        if count < 5:
+            idf_counts.pop(word, None)
+            for report in tf_counts:
+                report.pop(word, None)
+
+    print(len(idf_counts))
 
     return {"idf_counts": idf_counts, "tf_counts": tf_counts}
 
@@ -106,7 +131,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    reports = load_reports(args.dataset)
+    filenames = load_filenames(args.dataset)
+    reports = load_reports(args.dataset, filenames)
     
     print("counting")
     counts = count_occurances(reports)
