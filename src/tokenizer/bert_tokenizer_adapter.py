@@ -11,7 +11,7 @@ from .itokenizer import ITokenizer
 
 
 class BertTokenizerAdapter(ITokenizer):
-    def __init__(self, dataset_path: str):
+    def __init__(self):
         """
         Initializes the tokenizer using a pre-trained BERT model for German.
         :param model_name: Name of the pre-trained BERT model.
@@ -72,10 +72,10 @@ class BertTokenizerAdapter(ITokenizer):
 
 
 class SubsetBertTokenizer(BertTokenizerAdapter):
-    def __init__(self, dataset_path: str):
-        super().__init__(dataset_path)
+    def __init__(self, token_file: str):
+        super().__init__()
 
-        self._tokens = self._load_tokens(dataset_path)
+        self._tokens = self._load_tokens(token_file)
         self._tokens.append(super().start_idx)
         self._tokens.append(super().stop_idx)
         self._tokens.append(super().padding_idx)
@@ -85,14 +85,9 @@ class SubsetBertTokenizer(BertTokenizerAdapter):
         self._bert_to_subset_mapping = {token: idx for idx, token in enumerate(self._tokens)}
         self._subset_to_bert_mapping = {idx: token for token, idx in self._bert_to_subset_mapping.items()}
 
-    def _load_tokens(self, dataset_path: str) -> List[int]:
-        with open(os.path.join(dataset_path, self._token_filename), "r") as f:
+    def _load_tokens(self, token_file: str) -> List[int]:
+        with open(token_file, "r") as f:
             return json.load(f)
-
-    @property
-    @abstractmethod
-    def _token_filename(self) -> str:
-        ...
 
     @property
     def padding_idx(self) -> int:
@@ -129,17 +124,13 @@ class SubsetBertTokenizer(BertTokenizerAdapter):
 
 class SubsetBertTokenizerRepShort(SubsetBertTokenizer):
     def __init__(self, dataset_path: str):
-        super().__init__(dataset_path)
-
-    @property
-    def _token_filename(self) -> str:
-        return "rep_short_tokens_bert.json"
+        super().__init__(
+            token_file=os.path.join(dataset_path, "rep_short_tokens_bert.json")
+        )
 
 
 class SubsetBertTokenizerGPT(SubsetBertTokenizer):
     def __init__(self, dataset_path: str):
-        super().__init__(dataset_path)
-
-    @property
-    def _token_filename(self) -> str:
-        return "gpt_tokens_bert.json"
+        super().__init__(
+            token_file=os.path.join(dataset_path, "gpt_tokens_bert.json")
+        )

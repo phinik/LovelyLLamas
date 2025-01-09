@@ -13,7 +13,7 @@ from src.tokenizer import BertTokenizerAdapter
 def process(dataloader) -> Set:
     tokens_target_total = set()
 
-    tokenizer = BertTokenizerAdapter("foobar")
+    tokenizer = BertTokenizerAdapter()
 
     for item in tqdm.tqdm(dataloader):
         target = item["gpt_rewritten_cleaned"][0]
