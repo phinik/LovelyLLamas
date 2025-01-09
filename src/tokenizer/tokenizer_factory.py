@@ -1,5 +1,5 @@
 #from .bert_tokenizer import BertTokenizer
-from .bert_tokenizer_adapter import BertTokenizerAdapter
+from .bert_tokenizer_adapter import SubsetBertTokenizerRepShort, SubsetBertTokenizerGPT
 from .itokenizer import ITokenizer
 from .set_of_words_tokenizer import SetOfWordsTokenizerDefault, SetOfWordsTokenizerGPT
 
@@ -19,4 +19,7 @@ class TokenizerFactory:
             else:
                 return SetOfWordsTokenizerGPT(dataset_path)
         else:
-            return BertTokenizerAdapter()
+            if target == "default":
+                return SubsetBertTokenizerRepShort(dataset_path)
+            else:
+                return SubsetBertTokenizerGPT(dataset_path)
