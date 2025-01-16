@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 import tqdm
@@ -71,7 +72,11 @@ class Trainer:
         best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
         early_stopping_by_loss = EarlyStopping(ESOptDirection.MINIMIZE, 10, self._config["checkpoints"])
 
+        start_time = datetime.datetime.now()
+        n_epochs_trained = 0
         for epoch in range(1, self._config["epochs"] + 1):
+            n_epochs_trained += 1
+
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
             print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
@@ -92,7 +97,10 @@ class Trainer:
             if early_stopping_by_loss.update(eval_dict["loss"], epoch):
                 print(f" [EARLY STOPPING] Epoch {epoch} / {self._config['epochs']}")
                 break
+        end_time = datetime.datetime.now()
 
+        self._save_time_stats(start_time, end_time, n_epochs_trained)
+        
         self._writer.close()
 
     def _train_epoch(self, epoch: int):
@@ -146,6 +154,16 @@ class Trainer:
                 self._writer.add_scalar("train/loss", loss.item(), self._optimizer_steps)
                 self._optimizer_steps += 1
 
+    def _save_time_stats(self, start_time, end_time, n_epochs):
+        with open(os.path.join(self._config["checkpoints"], "time_stats.json"), "w") as f:
+            stat_dict = {
+                "start": start_time.isoformat(),
+                "end": end_time.isoformat(),
+                "epochs": n_epochs,
+                "avg_time_in_s_per_epoch": (end_time - start_time).total_seconds() / n_epochs
+            }
+
+            json.dump(stat_dict, f, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -170,7 +188,7 @@ if __name__ == "__main__":
         "cached": args.cache_data,
         "model": args.model,
         "batch_size": 10,
-        "epochs": 30,
+        "epochs": 100,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
