@@ -59,6 +59,11 @@ class RoPETransformer(nn.Module):
             padding_idx=self._params["tgt_pad_idx"]
         )
         
+        #from torchtune.modules import RotaryPositionalEmbeddings
+        self._n_heads = self._params["n_head"]
+        self._head_dim = self._params["d_model"] // self._params["n_head"]
+        self._pos_enc = RotaryPositionalEmbeddings(self._head_dim, 200)
+
         self._model = nn.Transformer(
             d_model=self._params["d_model"],
             nhead=self._params["n_head"],
@@ -89,8 +94,12 @@ class RoPETransformer(nn.Module):
         trg_att_mask = self._get_tgt_mask(tgt_seq)
         
         src_emb = self._src_word_emb(src_seq)
-
+        roped_src_emb = self._pos_enc(src_emb.view(src_emb.shape[0], src_emb.shape[1], self._n_heads, self._head_dim)).view(src_emb.shape)
+        src_emb = torch.stack([src_emb, roped_src_emb])
+                
         tgt_emb = self._tgt_word_emb(tgt_seq)
+        roped_tgt_emb = self._pos_enc(tgt_emb.view(tgt_emb.shape[0], tgt_emb.shape[1], self._n_heads, self._head_dim)).view(tgt_emb.shape)
+        tgt_emb = torch.stack([tgt_emb, roped_tgt_emb])
 
         x = self._model(
             src_emb, 
@@ -434,6 +443,7 @@ class RoPETransformerEncoderLayer(nn.Module):
         self.norm_first = norm_first
         self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
+        self._normRoPE = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
@@ -591,16 +601,17 @@ class RoPETransformerEncoderLayer(nn.Module):
         # see Fig. 1 of https://arxiv.org/pdf/2002.04745v1.pdf
         x = src
         if self.norm_first:
-            x = x + self._sa_block(
-                self.norm1(x), src_mask, src_key_padding_mask, self._n_heads, self._head_dim, is_causal=is_causal
+            value = x[0, ...].squeeze()
+            #querkey = x[1, ...].squeeze()
+            querkey = self._rope(value.view(value.shape[0], value.shape[1], self._n_heads, self._head_dim)).view(value.shape)
+            norm_value = self.norm1(value)
+            norm_querkey = self._normRoPE(querkey)
+            x = value + self._sa_block(
+                norm_value, norm_querkey, src_mask, src_key_padding_mask, is_causal=is_causal
             )
             x = x + self._ff_block(self.norm2(x))
         else:
-            x = self.norm1(
-                x
-                + self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal)
-            )
-            x = self.norm2(x + self._ff_block(x))
+            raise RuntimeError("Wrong block")
 
         return x
 
@@ -609,13 +620,11 @@ class RoPETransformerEncoderLayer(nn.Module):
     def _sa_block(
         self,
         x: torch.Tensor,
+        roped_x: torch.Tensor,
         attn_mask: Optional[torch.Tensor],
         key_padding_mask: Optional[torch.Tensor],
-        n_heads: int,
-        head_dim: int,
         is_causal: bool = False,
     ) -> torch.Tensor:
-        roped_x = self._rope(x.view(x.shape[0], x.shape[1], n_heads, head_dim)).view(x.shape)
         x = self.self_attn(
             roped_x,  # RoPE
             roped_x,  # RoPE
@@ -677,6 +686,7 @@ class RoPETransformerDecoderLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
+        self._normRoPE = nn.LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.dropout3 = nn.Dropout(dropout)
@@ -710,8 +720,13 @@ class RoPETransformerDecoderLayer(nn.Module):
     ) -> torch.Tensor:
         x = tgt
         if self.norm_first:
-            x = x + self._sa_block(
-                self.norm1(x), tgt_mask, tgt_key_padding_mask, self._n_heads, self._head_dim, tgt_is_causal
+            value = x[0, ...].squeeze()
+            #querkey = x[1, ...].squeeze()
+            querkey = self._rope(value.view(value.shape[0], value.shape[1], self._n_heads, self._head_dim)).view(value.shape)
+            norm_value = self.norm1(value)
+            norm_querkey = self._normRoPE(querkey)
+            x = value + self._sa_block(
+                norm_value, norm_querkey, tgt_mask, tgt_key_padding_mask, tgt_is_causal
             )
             x = x + self._mha_block(
                 self.norm2(x),
@@ -722,16 +737,7 @@ class RoPETransformerDecoderLayer(nn.Module):
             )
             x = x + self._ff_block(self.norm3(x))
         else:
-            x = self.norm1(
-                x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal)
-            )
-            x = self.norm2(
-                x
-                + self._mha_block(
-                    x, memory, memory_mask, memory_key_padding_mask, memory_is_causal
-                )
-            )
-            x = self.norm3(x + self._ff_block(x))
+            raise RuntimeError("Wrong block")
 
         return x
 
@@ -740,13 +746,11 @@ class RoPETransformerDecoderLayer(nn.Module):
     def _sa_block(
         self,
         x: torch.Tensor,
+        roped_x: torch.Tensor,
         attn_mask: Optional[torch.Tensor],
         key_padding_mask: Optional[torch.Tensor],
-        n_heads: int,
-        head_dim: int,
         is_causal: bool = False,
     ) -> torch.Tensor:
-        roped_x = self._rope(x.view(x.shape[0], x.shape[1], n_heads, head_dim)).view(x.shape)
         x = self.self_attn(
             roped_x,  # RoPE
             roped_x,  # RoPE
