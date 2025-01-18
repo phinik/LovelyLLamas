@@ -11,13 +11,14 @@ from typing import Dict
 from src.best_model import BestModel, OptDirection
 from src.dataloader import *
 from src.loss import CELoss
-from src.models import Transformer
+from src.models import Transformer, RoPETransformer
 from src.dummy_tokenizer import DummyTokenizer
 from src.tokenizer import BertBasedTokenizer
 from src.eval import Evaluator
 from src.models.lstm import LSTM
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class Trainer:
     def __init__(self, config: Dict):
@@ -27,6 +28,7 @@ class Trainer:
         self._train_dataloader = get_train_dataloader_weather_dataset(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
+            num_workers=self._config["num_workers"],
             cached=self._config["cached"]
         )
 
@@ -52,13 +54,12 @@ class Trainer:
 
         print("Parameters: ", sum([param.nelement() for param in self._model.parameters()]))
 
-        #exit()
         # Loss
-        self._loss = CELoss(ignore_idx=self._tokenizer.padding_idx_target)
+        self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
-        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=10)
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)  # TODO Patience auf 5 reduzieren
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
@@ -73,10 +74,13 @@ class Trainer:
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
             print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
+            print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
             self._train_epoch(epoch=epoch)
 
             print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
+            print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
             eval_dict = self._evaluator.evaluate(self._model)
+            print(f"              Loss: {eval_dict['loss']}")
             print(f"              Loss: {eval_dict['loss']}")
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
@@ -94,7 +98,7 @@ class Trainer:
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short"]
+            targets = batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
@@ -104,7 +108,7 @@ class Trainer:
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
                 targets, 
-                padding_value=self._tokenizer.padding_idx_target, 
+                padding_value=self._target_tokenizer.padding_idx, 
                 batch_first=True
             )
 
@@ -113,9 +117,10 @@ class Trainer:
             context = torch.cat(context)
 
             # Move tensors 
-            targets = targets.to(device=DEVICE)
-            context = context.to(device=DEVICE)
-            
+            context = batch["context"].to(device=DEVICE)
+            inputs = batch["inputs"].to(device=DEVICE)
+            labels = batch["labels"].to(device=DEVICE)
+
             self._optimizer.zero_grad()
 
             total_loss = 0
@@ -151,6 +156,10 @@ if __name__ == "__main__":
     parser.add_argument("--tensorboard_path", type=str, help="Where to store tensorboard summary")
     parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
+    parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+
     
     args = parser.parse_args()
     
@@ -172,7 +181,7 @@ if __name__ == "__main__":
     with open(os.path.join(config["checkpoints"], "config.json"), "w") as f:
         json.dump(config, f, sort_keys=True, indent=4)
 
-    print(f" [DEVICE] Using {DEVICE}")
+    print(f" [DEVICE] {DEVICE}")
     trainer = Trainer(config)
     trainer.train()
 

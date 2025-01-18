@@ -28,8 +28,9 @@ def ensure_directory_exists(directory_path: str) -> None:
 def process_city(city_data: pd.Series, output_dir: str) -> None:
     """Process a single city's weather data."""
     try:
-        city_name = city_data['Stadt']
-        output_file = f"{output_dir}/{city_name}.json"
+        city_name = city_data['City']
+        city_id = str(city_data['URL']).split("/")[-1][:-5]
+        output_file = f"{output_dir}/{city_name}-{city_id}.json"
         
         # Skip if file already exists
         if os.path.exists(output_file):
@@ -40,7 +41,7 @@ def process_city(city_data: pd.Series, output_dir: str) -> None:
         logging.info(f"Starting to process {city_name}", 
                     extra={'worker_id': thread_local.worker_id})
         
-        extractor = WeatherDataExtractor(city_data['URL'])
+        extractor = WeatherDataExtractor(city_data['URL'], False)
         extractor.save_data_to_json(output_file)
         
         logging.info(f"Successfully processed {city_name}", 
@@ -77,7 +78,7 @@ def worker(queue: Queue, output_dir: str, worker_id: int) -> None:
             
     logging.info("Worker shutting down", extra={'worker_id': thread_local.worker_id})
 
-def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
+def extract_weather_data(city_list: pd.DataFrame, num_threads: int = 4) -> None:
     """
     Main function to extract weather data concurrently.
     
@@ -89,8 +90,7 @@ def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
         start_time = time.time()
         
         # Read city list
-        city_list = pd.read_csv(city_list_path)
-        logging.info(f"Loaded {len(city_list)} cities from {city_list_path}", 
+        logging.info(f"Loaded {len(city_list)} cities from sliced DataFrame", 
                     extra={'worker_id': 'MAIN'})
 
         # Create output directory
@@ -150,4 +150,29 @@ def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
             )
 
 if __name__ == "__main__":
-    extract_weather_data("data/cities.csv")
+    import datetime
+    import tzlocal
+    from zoneinfo import ZoneInfo
+    import multiprocessing
+
+    # Main execution
+    if time.localtime().tm_hour != 0:
+        hours_from_zero = 24 - time.localtime().tm_hour
+    else:
+        hours_from_zero = 0
+
+    print('Time away from next day: ', hours_from_zero)
+
+    city_list = pd.read_csv(f'{os.getcwd()}/data/misc/crawled_information/city_data.csv')
+    timezone_city_list = city_list[city_list['Time Difference'] == hours_from_zero]
+
+    # print(city_list['Time Difference'].value_counts())
+    print('LENGTH OF ENTRIES: ',len(timezone_city_list))
+
+    if len(timezone_city_list) > 5000:
+        timezone_city_list = timezone_city_list.sample(5000)
+        print(len(timezone_city_list))
+        print(timezone_city_list['URL'].head(10))
+    # print(timezone_city_list['URL'].head(10))
+
+    extract_weather_data(city_list=timezone_city_list, num_threads=multiprocessing.cpu_count())

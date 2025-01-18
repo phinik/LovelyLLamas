@@ -1,0 +1,9 @@
+{
+    "activation": "relu",
+    "d_model": 256,
+    "dim_feedforward": 512,
+    "dropout": 0.1,
+    "n_head": 4,
+    "n_layers": 2,
+    "n_position": 200
+}

@@ -9,6 +9,8 @@ from src.dummy_tokenizer import DummyTokenizer
 from src.models.lstm import LSTM
 from src.loss import CELoss
 from src.models import Transformer
+from src.tokenizer import Tokenizer
+import src.determinism
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -22,14 +24,16 @@ class Evaluator:
         self._eval_dataloader = get_eval_dataloader_weather_dataset(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
+            num_workers=self._config["num_workers"],
             cached=self._config["cached"]
         )
 
         # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
+        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
+        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
 
         # Loss
-        self._loss = CELoss(ignore_idx=self._tokenizer.padding_idx_target)
+        self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
     @torch.no_grad()
     def evaluate(self, model) -> Dict:
@@ -40,7 +44,7 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short"]
+            targets = batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
@@ -50,13 +54,16 @@ class Evaluator:
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
                 targets, 
-                padding_value=self._tokenizer.padding_idx_target, 
+                padding_value=self._target_tokenizer.padding_idx, 
                 batch_first=True
             )
 
             # Context sequences always have equal length, hence, no padding is required and the list of tensors is just
             # concatenated.
             context = torch.concat(context)
+
+            # Create batch
+            batch = self._batchify(context, targets, self._config["block_size"])
 
             # Move tensors 
             targets = targets.to(device=DEVICE)
@@ -68,11 +75,30 @@ class Evaluator:
 
                 prediction = model(context, inputs)
                 
-                total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
-                labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
-                total_loss += self._loss(prediction, labels)
+            total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+            labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+            total_loss += self._loss(prediction, labels)
                 
         return {"loss": (total_loss / total_loss_values).item()}
+
+    @staticmethod
+    def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
+        batch_inputs = []
+        batch_labels = []
+        batch_context = []
+        
+        for j in range(0, targets.shape[1] - block_size):
+            batch_inputs.append(targets[:, j:j+block_size])
+            batch_labels.append(targets[:, j+1:j+1+block_size])
+            batch_context.append(context)
+
+        batch = {
+            "context": torch.concat(batch_context),
+            "inputs": torch.concat(batch_inputs),
+            "labels": torch.concat(batch_labels)
+        }
+        
+        return batch
 
 
 if __name__ == "__main__":
@@ -82,9 +108,11 @@ if __name__ == "__main__":
     parser.add_argument("--model_params", type=str, help="Which model params to use")
     #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
+    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
     
     args = parser.parse_args()
-    
+        
     config = {
         "dataset": args.dataset_path,
         "model_weights": args.model_weights,

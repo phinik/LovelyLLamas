@@ -1,0 +1,205 @@
+Stadt,URL
+Hamburg,https://www.wetter.com/deutschland/hamburg/DE0004130.html
+Oslo,https://www.wetter.com/norwegen/oslo/NO0OS0002.html
+Helsinki,https://www.wetter.com/finnland/helsinki/FI0ES0005.html
+Stockholm,https://www.wetter.com/schweden/stockholm/SE0ST0012.html
+Kopenhagen,https://www.wetter.com/daenemark/kopenhagen/DK0KH1299.html
+Amsterdam,https://www.wetter.com/niederlande/amsterdam/NL0NH0013.html
+Moskau,https://www.wetter.com/russland/moskau/RU0MC0002.html
+Rom,https://www.wetter.com/italien/rom/IT0LA0153.html
+Madrid,https://www.wetter.com/spanien/madrid/ES0MA0079.html
+London,https://www.wetter.com/vereinigtes-koenigreich/london/GB0KI0101.html
+Dublin,https://www.wetter.com/irland/dublin/IE0DN0001.html
+Reykjavik,https://www.wetter.com/island/reykjavik/ISXY00001.html
+Athen,https://www.wetter.com/griechenland/athen/GR0AT0001.html
+Ankara,https://www.wetter.com/tuerkei/ankara/TR0AN0001.html
+Kairo,https://www.wetter.com/aegypten/kairo/EG0QH0001.html
+Dubai,https://www.wetter.com/vereinigte-arabische-emirate/dubai/AE0DU0002.html
+Mumbai,https://www.wetter.com/indien/mumbai/IN0MH0006.html
+Bengaluru,https://www.wetter.com/indien/bengaluru/IN0KA0001.html
+Peking,https://www.wetter.com/china/beijing/CN0BJ0003.html
+Shanghai,https://www.wetter.com/china/schanghai/CN0SH0002.html
+Taipeh,https://www.wetter.com/taiwan/taipeh/TW0TP0002.html
+Tokio,https://www.wetter.com/japan/tokio/JP0TY0011.html
+Sapporo,https://www.wetter.com/japan/sapporo/JP0HO0016.html
+Astana,https://www.wetter.com/kasachstan/astana/KZXY00001.html
+Ulaanbaatar,https://www.wetter.com/mongolei/ulaanbaatar/MNXY00001.html
+Kathmandu,https://www.wetter.com/nepal/kathmandu/NP0BA0002.html
+Paris,https://www.wetter.com/frankreich/paris/FR0IF0356.html
+Lissabon,https://www.wetter.com/portugal/lissabon/PT0LI0005.html
+Warschau,https://www.wetter.com/polen/warschau/PL0MZ0005.html
+Kiew,https://www.wetter.com/ukraine/kiew/UA0KC0001.html
+Zagreb,https://www.wetter.com/kroatien/zagreb/HR0GZ0001.html
+Bukarest,https://www.wetter.com/rumaenien/bukarest/RO0BU0001.html
+Seoul,https://www.wetter.com/suedkorea/seoul/KR0KG0007.html
+Brisbane,https://www.wetter.com/australien/brisbane/AU0QL0005.html
+Sydney,https://www.wetter.com/australien/sydney/AU0NS0062.html
+Melbourne,https://www.wetter.com/australien/melbourne/AU0VI0027.html
+Perth,https://www.wetter.com/australien/perth/AU0WA0014.html
+Hobart,https://www.wetter.com/australien/hobart/AU0TS0007.html
+New York,https://www.wetter.com/vereinigte-staaten/new-york-city/US0NY0993.html
+Los Angeles,https://www.wetter.com/vereinigte-staaten/los-angeles/US5368361.html
+Mexico City,https://www.wetter.com/mexiko/mexiko-stadt/MX3530597.html
+Buenos Aires,https://www.wetter.com/argentinien/buenos-aires/AR0DF0001.html
+São Paulo,https://www.wetter.com/brasilien/sao-paulo/BR3448439.html
+Rio de Janeiro,https://www.wetter.com/brasilien/rio-de-janeiro/BR0RJ0001.html
+Lima,https://www.wetter.com/peru/lima/PE0LI0002.html
+Bogotá,https://www.wetter.com/kolumbien/bogota/COXY00001.html
+Santiago,https://www.wetter.com/chile/santiago/CL0RM0019.html
+Caracas,https://www.wetter.com/venezuela/caracas/VE0DF0001.html
+Montevideo,https://www.wetter.com/uruguay/montevideo/UY0MO0001.html
+Havana,https://www.wetter.com/kuba/havanna/CU0CH0001.html
+Kingston,https://www.wetter.com/jamaika/kingston/JM0KI0002.html
+Toronto,https://www.wetter.com/kanada/toronto/CA0ON0175.html
+Vancouver,https://www.wetter.com/kanada/vancouver/CA6173331.html
+Montreal,https://www.wetter.com/kanada/montreal/CA0QC0048.html
+Winnipeg,https://www.wetter.com/kanada/winnipeg/CA0MB0020.html
+Quebec,https://www.wetter.com/kanada/quebec/CA0QC0055.html
+Manchester,https://www.wetter.com/vereinigtes-koenigreich/manchester/GB0KD0545.html
+Salt Lake City,https://www.wetter.com/vereinigte-staaten/salt-lake-city/US5780993.html
+Nice,https://www.wetter.com/frankreich/nizza/FRXY00568.html
+Barcelona,https://www.wetter.com/spanien/barcelona/ES0BC0020.html
+Porto,https://www.wetter.com/portugal/porto/PT0PO0004.html
+Berlin,https://www.wetter.com/deutschland/berlin/DE0001020.html
+Munich,https://www.wetter.com/deutschland/muenchen/DE0006515.html
+Vienna,https://www.wetter.com/oesterreich/wien/ATAT10678.html
+Prague,https://www.wetter.com/tschechien/prag/CZ0PR0001.html
+Budapest,https://www.wetter.com/ungarn/budapest/HU0BU0001.html
+Milan,https://www.wetter.com/italien/mailand/IT0LO0338.html
+Naples,https://www.wetter.com/italien/neapel/IT0CA0149.html
+Zurich,https://www.wetter.com/schweiz/zuerich/CH0CH4503.html
+Geneva,https://www.wetter.com/vereinigte-staaten/geneva/US0IL0446.html
+Brussels,https://www.wetter.com/belgien/bruessel/BE0BR0029.html
+Istanbul,https://www.wetter.com/tuerkei/istanbul/TR0IB0001.html
+St. Petersburg,https://www.wetter.com/vereinigte-staaten/saint-petersburg/US0FL0477.html
+Miami,https://www.wetter.com/vereinigte-staaten/miami/US0OK0354.html
+Minsk,https://www.wetter.com/belarus/minsk/BY0MI0001.html
+Tallinn,https://www.wetter.com/estland/tallinn/EE0HA0003.html
+Belfast,https://www.wetter.com/vereinigtes-koenigreich/belfast/GB0KN0125.html
+Edinburgh,https://www.wetter.com/vereinigtes-koenigreich/edinburgh/GB0KM0960.html
+Glasgow,https://www.wetter.com/vereinigtes-koenigreich/glasgow/GB0KM1148.html
+Abu Dhabi,https://www.wetter.com/vereinigte-arabische-emirate/abu-dhabi/AE0AZ0001.html
+Jerusalem,https://www.wetter.com/israel/jerusalem/IL0JM0003.html
+Alexandria,https://www.wetter.com/aegypten/alexandria/EG0SJ0001.html
+Casablanca,https://www.wetter.com/marokko/casablanca/MA0CA0001.html
+Rabat,https://www.wetter.com/marokko/rabat/MA0RA0001.html
+Marrakech,https://www.wetter.com/marokko/marrakesch/MAXY00002.html
+Nairobi,https://www.wetter.com/kenia/nairobi/KE0NA0001.html
+Mombasa,https://www.wetter.com/kenia/mombasa/KE0CO0001.html
+Addis Ababa,https://www.wetter.com/aethiopien/addis-abeba/ET0AA0001.html
+Khartoum,https://www.wetter.com/sudan/khartum/SD0KH0001.html
+Dakar,https://www.wetter.com/senegal/dakar/SN0KL0001.html
+Accra,https://www.wetter.com/ghana/accra/GH0AA0001.html
+Lagos,https://www.wetter.com/nigeria/lagos/NG0LA0001.html
+Abuja,https://www.wetter.com/nigeria/abuja/NG2352778.html
+Kinshasa,https://www.wetter.com/demokratische-republik-kongo/kinshasa/CDXY00001.html
+Luanda,https://www.wetter.com/angola/luanda/AO0LU0001.html
+Johannesburg,https://www.wetter.com/suedafrika/johannesburg/ZA0GT0006.html
+Cape Town,https://www.wetter.com/suedafrika/kapstadt/ZA0WC0002.html
+Pretoria,https://www.wetter.com/suedafrika/pretoria/ZA0GT0009.html
+Durban,https://www.wetter.com/suedafrika/durban/ZA0NL0002.html
+Windhoek,https://www.wetter.com/namibia/windhoek/NA0KH0001.html
+Antananarivo,https://www.wetter.com/madagaskar/antananarivo/MG0AV0001.html
+Maputo,https://www.wetter.com/mosambik/maputo/MZ0MP0001.html
+Adelaide,https://www.wetter.com/australien/adelaide/AU0SA0001.html
+Darwin,https://www.wetter.com/australien/darwin/AU0NT0002.html
+Auckland,https://www.wetter.com/neuseeland/auckland/NZ0AU0002.html
+Wellington,https://www.wetter.com/neuseeland/wellington/NZ0WG0005.html
+Christchurch,https://www.wetter.com/neuseeland/christchurch/NZ0CA0002.html
+Nouméa,https://www.wetter.com/neukaledonien/noumea/NC0NC0001.html
+Port Moresby,https://www.wetter.com/papua-neuguinea/port-moresby/PG0NC0001.html
+Suva,https://www.wetter.com/fidschi/suva/FJ0CE0002.html
+Nadi,https://www.wetter.com/fidschi/nadi/FJXY00001.html
+Osaka,https://www.wetter.com/japan/osaka/JP0OS0003.html
+Nagoya,https://www.wetter.com/japan/nagoya/JP0AI0007.html
+Kyoto,https://www.wetter.com/japan/kyoto/JP0KY0002.html
+Fukuoka,https://www.wetter.com/japan/fukuoka/JP0FK0001.html
+Busan,https://www.wetter.com/suedkorea/busan/KR0PU0002.html
+Guangzhou,https://www.wetter.com/china/guangzhou/CN0GD0005.html
+Shenzhen,https://www.wetter.com/china/shenzhen/CN0GD0012.html
+Hong Kong,https://www.wetter.com/hongkong/hongkong/HK0HK0003.html
+Manila,https://www.wetter.com/philippinen/manila/PH0MM0005.html
+Cebu,https://www.wetter.com/philippinen/cebu-city/PH0CU0001.html
+Ho Chi Minh Stadt,https://www.wetter.com/vietnam/ho-chi-minh-stadt/VN0HC0001.html
+Hanoi,https://www.wetter.com/vietnam/hanoi/VN0HN0001.html
+Chiang Mai,https://www.wetter.com/thailand/chiang-mai/TH0CM0001.html
+Phnom Penh,https://www.wetter.com/kambodscha/phnom-penh/KH0PP0001.html
+Vientiane,https://www.wetter.com/laos/vientiane/LA0VI0001.html
+Rangun,https://www.wetter.com/myanmar/rangun/MM1298824.html
+Kuala Lumpur,https://www.wetter.com/malaysia/kuala-lumpur/MY0KL0002.html
+Singapore,https://www.wetter.com/singapur/singapur/SG0SG0013.html
+Jakarta,https://www.wetter.com/indonesien/jakarta/ID0JK0002.html
+Surabaya,https://www.wetter.com/indonesien/surabaya/ID0JI0006.html
+Islamabad,https://www.wetter.com/pakistan/islamabad/PK0IS0001.html
+Karachi,https://www.wetter.com/pakistan/karatschi/PK0SD0002.html
+Lahore,https://www.wetter.com/pakistan/lahore/PK0PB0008.html
+Dakka,https://www.wetter.com/bangladesch/ward-72/dakka/BD0DA0001.html
+Delhi,https://www.wetter.com/indien/neu-delhi/IN0DL0002.html
+Chennai,https://www.wetter.com/indien/chennai/IN0TN0001.html
+Colombo,https://www.wetter.com/sri-lanka/colombo/LK0CE0001.html
+Male,https://www.wetter.com/malediven/male/MV0MA0001.html
+Kolkata,https://www.wetter.com/indien/kolkata/IN0WB0002.html
+Thimphu,https://www.wetter.com/bhutan/thimphu/BT1252416.html
+Riyadh,https://www.wetter.com/saudi-arabien/riad/SA0RI0001.html
+Jeddah,https://www.wetter.com/saudi-arabien/dschidda/SA0MK0001.html
+Mekka,https://www.wetter.com/saudi-arabien/mekka/SAXY00002.html
+Tehran,https://www.wetter.com/iran/teheran/IR0TH0002.html
+Baghdad,https://www.wetter.com/irak/bagdad/IQ0BG0001.html
+Amman,https://www.wetter.com/jordanien/amman/JO0AM0001.html
+Beirut,https://www.wetter.com/libanon/beirut/LB0BA0002.html
+Damascus,https://www.wetter.com/syrien/damaskus/SY0DI0001.html
+Muscat,https://www.wetter.com/oman/maskat/OM0MA0001.html
+Doha,https://www.wetter.com/katar/doha/QA0DA0001.html
+Algiers,https://www.wetter.com/algerien/algier/DZ0AL0001.html
+Tunis,https://www.wetter.com/tunesien/tunis/TN0TU0002.html
+Tripoli,https://www.wetter.com/libyen/tripolis/LY0TB0001.html
+Bamako,https://www.wetter.com/mali/bamako/ML0BA0001.html
+Conakry,https://www.wetter.com/guinea/conakry/GN0CK0001.html
+Ouagadougou,https://www.wetter.com/burkina-faso/ouagadougou/BFXY00001.html
+Bujumbura,https://www.wetter.com/burundi/bujumbura/BI0BU0001.html
+Harare,https://www.wetter.com/simbabwe/harare/ZW0MC0001.html
+Lusaka,https://www.wetter.com/sambia/lusaka/ZM0LS0001.html
+Libreville,https://www.wetter.com/gabun/libreville/GA0ES0001.html
+Yaoundé,https://www.wetter.com/kamerun/yaounde/CM0CE0001.html
+Brazzaville,https://www.wetter.com/kongo-republik-kongo/brazzaville/CG0BR0001.html
+Port Louis,https://www.wetter.com/mauritius/port-louis/MU0PL0001.html
+Victoria,https://www.wetter.com/seychellen/victoria/SCXY00001.html
+Sao Tome,https://www.wetter.com/sao-tome-und-principe/sao-tome/ST0ST0001.html
+San Salvador,https://www.wetter.com/el-salvador/san-salvador/SV0SS0001.html
+Guatemala City,https://www.wetter.com/guatemala/guatemala-stadt/GT0GU0002.html
+Panama City,https://www.wetter.com/panama/panama-stadt/PA0PN0001.html
+San José,https://www.wetter.com/costa-rica/san-jose/CR0SJ0004.html
+Quito,https://www.wetter.com/ecuador/quito/EC0PI0001.html
+Asunción,https://www.wetter.com/paraguay/asuncion/PY0AS0001.html
+La Paz,https://www.wetter.com/bolivien/la-paz/BO0LP0003.html
+Sucre,https://www.wetter.com/bolivien/sucre/BO0CQ0001.html
+Georgetown,https://www.wetter.com/guyana/georgetown/GY0DE0002.html
+Paramaribo,https://www.wetter.com/suriname/paramaribo/SR0PM0001.html
+Punta Arenas,https://www.wetter.com/chile/punta-arenas/CL0MA0002.html
+Stanley,https://www.wetter.com/falklandinseln/port-stanley/FK3426691.html
+Valparaíso,https://www.wetter.com/chile/valparaiso/CL0VS0006.html
+Anchorage,https://www.wetter.com/vereinigte-staaten/anchorage/US5879400.html
+Juneau,https://www.wetter.com/vereinigte-staaten/juneau/US5554072.html
+Honolulu,https://www.wetter.com/vereinigte-staaten/honolulu/US5856195.html
+San Francisco,https://www.wetter.com/vereinigte-staaten/san-francisco/US5391959.html
+Denver,https://www.wetter.com/vereinigte-staaten/denver/US5419384.html
+Houston,https://www.wetter.com/vereinigte-staaten/houston/US0TX0607.html
+Dallas,https://www.wetter.com/vereinigte-staaten/dallas/US0TX0325.html
+Atlanta,https://www.wetter.com/vereinigte-staaten/atlanta/US0GA0028.html
+Orlando,https://www.wetter.com/vereinigte-staaten/orlando/US0FL0382.html
+Tampa,https://www.wetter.com/vereinigte-staaten/tampa/US0FL0494.html
+Phoenix,https://www.wetter.com/vereinigte-staaten/phoenix/US5308655.html
+Chicago,https://www.wetter.com/vereinigte-staaten/chicago/US0IL0228.html
+Seattle,https://www.wetter.com/vereinigte-staaten/seattle/US5809844.html
+Boston,https://www.wetter.com/vereinigte-staaten/boston/US0MA0046.html
+Philadelphia,https://www.wetter.com/vereinigte-staaten/philadelphia/US0PA1266.html
+Las Vegas,https://www.wetter.com/vereinigte-staaten/las-vegas/US5506956.html
+New Orleans,https://www.wetter.com/vereinigte-staaten/new-orleans/US0LA0338.html
+Detroit,https://www.wetter.com/vereinigte-staaten/detroit/US0MI0224.html
+Columbus,https://www.wetter.com/vereinigte-staaten/columbus/US0OH0216.html
+Pittsburgh,https://www.wetter.com/vereinigte-staaten/pittsburgh/US0PA1279.html
+Raleigh,https://www.wetter.com/vereinigte-staaten/raleigh/US0MS0314.html
+Minneapolis,https://www.wetter.com/vereinigte-staaten/minneapolis/US0MN0505.html
+Charleston,https://www.wetter.com/vereinigte-staaten/charleston/US0SC0051.html
+Calgary,https://www.wetter.com/kanada/calgary/CA5913490.html
+Edmonton,https://www.wetter.com/kanada/edmonton/CA5946768.html

@@ -32,7 +32,7 @@ if __name__ == "__main__":
             # print(file)
             if file_content["strings"]["weather_description"] == None or file_content["strings"]["further_details"] == None:
                 print("missing text details: ", file)
-                crawled_data = WeatherDataExtractor(df[df["Stadt"] == str(file)[:-5]]["URL"].values[0], True).return_only_data()
+                crawled_data = WeatherDataExtractor(df[df["City"] == str(file)[:-5]]["URL"].values[0], True).return_only_data()
             else:
                 continue
 
@@ -69,9 +69,9 @@ if __name__ == "__main__":
 
     if rescrape_needed:
         files = [str(file)[:-5] for file in os.listdir(f"{os.getcwd()}/data/{dir_list[0]}") if "standardised" not in file]
-        df = df[~df["Stadt"].isin(files)]
+        df = df[~df["City"].isin(files)]
         if len(df) > 0:
-            for url, city in zip(df["URL"].values, df["Stadt"].values):
+            for url, city in zip(df["URL"].values, df["City"].values):
                 # print(url, city)
                 # print(f"{os.getcwd()}/data/{dir_list[0]}/{city}.json")
 
