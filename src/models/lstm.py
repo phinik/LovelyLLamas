@@ -8,8 +8,19 @@ import json
 class LSTM(nn.Module):
     ''' A sequence-to-sequence model using an LSTM architecture. '''
 
-    def __init__(self, n_src_vocab: int, n_trg_vocab: int, src_pad_idx: int, trg_pad_idx: int,
-    embedding_dim: int = 512, hidden_dim: int = 512, num_layers: int = 2, dropout: float = 0.1, bidirectional: bool = False, trg_emb_prj_weight_sharing: bool = True, positional_encoding: bool = True):
+    def __init__(self,
+                 name: str,
+                 src_vocab_size: int,
+                 tgt_vocab_size: int,
+                 src_pad_idx: int,
+                 tgt_pad_idx: int,
+                 embedding_dim: int = 512,
+                 hidden_dim: int = 512,
+                 num_layers: int = 2,
+                 dropout: float = 0.1,
+                 bidirectional: bool = False,
+                 tgt_emb_prj_weight_sharing: bool = True,
+                 positional_encoding: bool = True):
 
         super(LSTM, self).__init__()
 
@@ -20,30 +31,33 @@ class LSTM(nn.Module):
             raise ValueError("Number of layers must be a positive integer.")
         if not (0 <= dropout < 1):
             raise ValueError("Dropout rate must be between 0 and 1.")
-        if trg_emb_prj_weight_sharing and embedding_dim != hidden_dim:
+        if tgt_emb_prj_weight_sharing and embedding_dim != hidden_dim:
             raise ValueError("When using the weight sharing mechanism, the hidden dimension must be equal to the embedding dimension.")
 
         self._params_dict = {
-            "n_src_vocab": n_src_vocab,
-            "n_trg_vocab": n_trg_vocab,
+            "src_vocab_size": src_vocab_size,
+            "tgt_vocab_size": tgt_vocab_size,
             "src_pad_idx": src_pad_idx,
-            "trg_pad_idx": trg_pad_idx,
+            "tgt_pad_idx": tgt_pad_idx,
             "embedding_dim": embedding_dim,
             "hidden_dim": hidden_dim,
             "num_layers": num_layers,
             "dropout": dropout,
             "bidirectional": bidirectional,
-            "trg_emb_prj_weight_sharing": trg_emb_prj_weight_sharing,
-            "positional_encoding": positional_encoding
+            "tgt_emb_prj_weight_sharing": tgt_emb_prj_weight_sharing,
+            "positional_encoding": positional_encoding,
+            "name": name
         }
+
+        self.name = name
 
         # Save padding indices
         self._src_pad_idx = src_pad_idx
-        self._trg_pad_idx = trg_pad_idx
+        self._tgt_pad_idx = tgt_pad_idx
 
         # Embeddings
-        self._embedding_src = nn.Embedding(n_src_vocab, embedding_dim, padding_idx=src_pad_idx)
-        self._embedding_trg = nn.Embedding(n_trg_vocab, embedding_dim, padding_idx=trg_pad_idx)
+        self._embedding_src = nn.Embedding(src_vocab_size, embedding_dim, padding_idx=src_pad_idx)
+        self._embedding_tgt = nn.Embedding(tgt_vocab_size, embedding_dim, padding_idx=tgt_pad_idx)
         self._embedding_dropout = nn.Dropout(dropout)
 
         # Normalization
@@ -74,14 +88,14 @@ class LSTM(nn.Module):
         )
 
         # Projection Layer
-        self.fc = nn.Linear(hidden_dim, n_trg_vocab)
+        self.fc = nn.Linear(hidden_dim, tgt_vocab_size)
 
         # Initialize Weights
         self.initialize_weights()
 
         # Weight Sharing
-        if trg_emb_prj_weight_sharing:
-            self.fc.weight = self._embedding_trg.weight
+        if tgt_emb_prj_weight_sharing:
+            self.fc.weight = self._embedding_tgt.weight
 
     def initialize_weights(self):
         """ Initialize the model weights. """
@@ -91,7 +105,7 @@ class LSTM(nn.Module):
             elif "bias" in name:  # Bias terms are typically 1D
                 nn.init.constant_(param, 0)
    
-    def forward(self, src_seq, trg_seq):
+    def forward(self, src_seq, tgt_seq):
         # Source Embedding
         src_emb = self._embedding_src(src_seq)
         src_emb = self._embedding_dropout(src_emb)
@@ -103,16 +117,17 @@ class LSTM(nn.Module):
 
         if self.encoder.bidirectional:
             # Combine bidirectional hidden states
+            # arams_dict["hidden_dim"])
             hidden = combine_bidirectional_states(hidden, self.encoder.num_layers, self._params_dict["hidden_dim"])
             cell = combine_bidirectional_states(cell, self.encoder.num_layers, self._params_dict["hidden_dim"])
 
         # Target Embedding
-        trg_emb = self._embedding_trg(trg_seq)
-        trg_emb = self._embedding_dropout(trg_emb)
-        trg_emb = self.positional_encoding(trg_emb) if self.positional_encoding else trg_emb
+        tgt_emb = self._embedding_tgt(tgt_seq)
+        tgt_emb = self._embedding_dropout(tgt_emb)
+        tgt_emb = self.positional_encoding(tgt_emb) if self.positional_encoding else tgt_emb
 
         # Decode Target Sequence
-        dec_output, _ = self.decoder(trg_emb, (hidden, cell))
+        dec_output, _ = self.decoder(tgt_emb, (hidden, cell))
         dec_output = self.layer_norm_dec(dec_output)
 
         flattened_dec_output = dec_output.reshape(-1, dec_output.size(-1))

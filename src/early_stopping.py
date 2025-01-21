@@ -48,7 +48,7 @@ class EarlyStopping:
         self._best_value_epoch = epoch
     
     def _patience_is_triggered(self, epoch) -> bool:
-        return (epoch - self._best_value_epoch) > self._patience
+        return (epoch - self._best_value_epoch) >= self._patience
     
     def _save_early_stopping_note(self, epoch: int) -> None:
         if self._save_path is not None:

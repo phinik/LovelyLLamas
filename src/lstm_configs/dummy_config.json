@@ -1,0 +1,9 @@
+{
+    "embedding_dim": 16,
+    "hidden_dim": 16,
+    "num_layers": 1,
+    "dropout": 0.1,
+    "bidirectional": false,
+    "tgt_emb_prj_weight_sharing": true,
+    "positional_encoding": true
+}

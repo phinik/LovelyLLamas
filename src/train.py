@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 import tqdm
@@ -8,14 +9,17 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from typing import Dict
 
+from src.models.lstm import LSTM
 from src.best_model import BestModel, OptDirection
+from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
 from src.loss import CELoss
-from src.models import Transformer, RoPETransformer
-from src.dummy_tokenizer import DummyTokenizer
-from src.tokenizer import BertBasedTokenizer
+from src.models import TransformerFactory
+from src.tokenizer import TokenizerFactory, ContextTokenizer
 from src.eval import Evaluator
-from src.models.lstm import LSTM
+from src import utils
+import src.determinism
+
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -33,33 +37,35 @@ class Trainer:
         )
 
         # Tokenizer
-        self._tokenizer = DummyTokenizer(self._config["dataset"])
-        #self._tokenizer = BertBasedTokenizer(self._config["dataset"])
+        self._context_tokenizer = ContextTokenizer(self._config["dataset"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
-        self._model = LSTM(
-            n_src_vocab=self._tokenizer.size_context_vocab,
-            n_trg_vocab=self._tokenizer.size_target_vocab,
-            src_pad_idx=self._tokenizer.padding_idx_context,
-            trg_pad_idx=self._tokenizer.padding_idx_target,
-            embedding_dim=64,
-            hidden_dim=128,
-            num_layers=1,
-            dropout=0.1,
-            bidirectional=True,
-            trg_emb_prj_weight_sharing=False,
-            positional_encoding=False
-        )
+        with open(self._config["model_config"], "r") as f:
+            c = json.load(f)
+            
+        c["src_vocab_size"] = self._context_tokenizer.vocab_size
+        c["tgt_vocab_size"] = self._target_tokenizer.vocab_size 
+        c["src_pad_idx"] = self._context_tokenizer.padding_idx
+        c["tgt_pad_idx"] = self._target_tokenizer.padding_idx
+        
+        if self._config["model"] == "lstm":
+            c = {k: v for k, v in c.items() if k in LSTM.__init__.__code__.co_varnames}
+            self._model = LSTM(**c)
+        else:
+            self._model = TransformerFactory.from_dict(self._config["model"], c)
+
         self._model.to(DEVICE)
-        self._model.save_params_to(self._config["checkpoints"])
-
-        print("Parameters: ", sum([param.nelement() for param in self._model.parameters()]))
+        self._model.save_params_to(self._config["checkpoints"])   
+        print(f" [MODEL] {self._model.name}")     
+        print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
 
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
-        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)  # TODO Patience auf 5 reduzieren
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self._optimizer, factor=.5, patience=5)
+        self._optimizer_steps = 0
 
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
@@ -69,18 +75,20 @@ class Trainer:
 
     def train(self):
         best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
+        early_stopping_by_loss = EarlyStopping(ESOptDirection.MINIMIZE, 10, self._config["checkpoints"])
 
+        start_time = datetime.datetime.now()
+        n_epochs_trained = 0
         for epoch in range(1, self._config["epochs"] + 1):
+            n_epochs_trained += 1
+
             self._writer.add_scalar("learning_rate", self._optimizer.param_groups[0]['lr'], epoch)
 
-            print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
             print(f" [TRAINING] Epoch {epoch} / {self._config['epochs']}")
             self._train_epoch(epoch=epoch)
 
             print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
-            print(f" [EVALUATING] Epoch {epoch} / {self._config['epochs']}")
             eval_dict = self._evaluator.evaluate(self._model)
-            print(f"              Loss: {eval_dict['loss']}")
             print(f"              Loss: {eval_dict['loss']}")
 
             self._writer.add_scalar("eval/loss", eval_dict["loss"], epoch)
@@ -91,6 +99,13 @@ class Trainer:
 
             best_model_by_loss.update(epoch, self._model, eval_dict["loss"])
 
+            if early_stopping_by_loss.update(eval_dict["loss"], epoch):
+                print(f" [EARLY STOPPING] Epoch {epoch} / {self._config['epochs']}")
+                break
+        end_time = datetime.datetime.now()
+
+        self._save_time_stats(start_time, end_time, n_epochs_trained)
+        
         self._writer.close()
 
     def _train_epoch(self, epoch: int):
@@ -98,12 +113,12 @@ class Trainer:
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short_wout_boeen"]
+            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
+                context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -114,53 +129,60 @@ class Trainer:
 
             # Context sequences always have equal length, hence, no padding is required and the list of tensors is just
             # concatenated.
-            context = torch.cat(context)
+            context = torch.concat(context)
 
-            # Move tensors 
-            context = batch["context"].to(device=DEVICE)
-            inputs = batch["inputs"].to(device=DEVICE)
-            labels = batch["labels"].to(device=DEVICE)
+            # Create batch
+            batch = utils.batchify(context, targets, self._config["block_size"], DEVICE)
 
-            self._optimizer.zero_grad()
+            for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
+                # Move tensors 
+                #contexts = contexts.to(device=DEVICE)
+                #inputs = inputs.to(device=DEVICE)
+                #print(inputs.device, labels.device)
+                #print(inputs.storage().data_ptr(), labels.storage().data_ptr())
+                #exit()
+                #labels = labels.to(device=DEVICE)
 
-            total_loss = 0
-            n_total_loss_values = 0
-            for j in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, j:j+self._config["block_size"]]
-                labels = targets[:, j+1:j+1+self._config["block_size"]]
+                self._optimizer.zero_grad()
 
-                prediction = self._model(context, inputs)
+                prediction = self._model(contexts, inputs)
+
+                n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+                labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                #labels[labels == self._target_tokenizer.unknown_idx] = self._target_tokenizer.padding_idx
                 
-                n_total_loss_values += torch.sum(torch.where(labels != self._tokenizer.padding_idx_target, 1, 0))
-                labels = labels.reshape(labels.shape[0] * labels.shape[1])  # B * T
-                total_loss += self._loss(prediction, labels)
-                
+                loss = self._loss(prediction, labels) / n_loss_values
+                loss.backward()
 
-            total_loss /= n_total_loss_values
-            total_loss.backward()
-
-            # Gradient Clipping
-            torch.nn.utils.clip_grad_norm_(self._model.parameters(), 1.0)
-
-            self._optimizer.step()
+                self._optimizer.step()
             
-            self._writer.add_scalar("train/loss", total_loss.item(), (epoch-1) * len(self._train_dataloader) + i)
+                self._writer.add_scalar("train/loss", loss.item(), self._optimizer_steps)
+                self._optimizer_steps += 1
 
+    def _save_time_stats(self, start_time, end_time, n_epochs):
+        with open(os.path.join(self._config["checkpoints"], "time_stats.json"), "w") as f:
+            stat_dict = {
+                "start": start_time.isoformat(),
+                "end": end_time.isoformat(),
+                "epochs": n_epochs,
+                "avg_time_in_s_per_epoch": (end_time - start_time).total_seconds() / n_epochs
+            }
 
+            json.dump(stat_dict, f, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", type=str, help="Name of the run")
-    parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
-    parser.add_argument("--checkpoints_path", type=str, help="Where to store checkpoints")
-    parser.add_argument("--tensorboard_path", type=str, help="Where to store tensorboard summary")
-    parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
+    parser.add_argument("--name", type=str, required=True, help="Name of the run")
+    parser.add_argument("--dataset_path", type=str, required=True, help="Path to dataset root")
+    parser.add_argument("--checkpoints_path", type=str, required=True, help="Where to store checkpoints")
+    parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
+    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
 
-    
     args = parser.parse_args()
     
     config = {
@@ -170,9 +192,13 @@ if __name__ == "__main__":
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
         "cached": args.cache_data,
         "model": args.model,
-        "batch_size": 5,
-        "epochs": 70,
-        "block_size": 20
+        "batch_size": 10,
+        "epochs": 100,
+        "block_size": 20,
+        "tokenizer": args.tokenizer,
+        "model_config": args.model_config,
+        "num_workers": args.num_workers,
+        "target": args.target
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)
@@ -184,4 +210,3 @@ if __name__ == "__main__":
     print(f" [DEVICE] {DEVICE}")
     trainer = Trainer(config)
     trainer.train()
-

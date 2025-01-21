@@ -2,15 +2,15 @@ import argparse
 import tqdm
 import torch
 import torch.nn as nn
+import os
 
 from typing import Dict
 from src.dataloader import get_eval_dataloader_weather_dataset
-from src.dummy_tokenizer import DummyTokenizer
-from src.models.lstm import LSTM
+from src.tokenizer import TokenizerFactory, ContextTokenizer
 from src.loss import CELoss
-from src.models import Transformer
-from src.tokenizer import Tokenizer
+from src.models import TransformerFactory
 import src.determinism
+from src import utils
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -29,8 +29,8 @@ class Evaluator:
         )
 
         # Tokenizer
-        self._context_tokenizer = DummyTokenizer(self._config["dataset"])
-        self._target_tokenizer = DummyTokenizer(self._config["dataset"]) if self._config["tokenizer"] == "dummy" else Tokenizer()
+        self._context_tokenizer = ContextTokenizer(self._config["dataset"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
@@ -44,12 +44,12 @@ class Evaluator:
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
             context = batch["overview"]
-            targets = batch["report_short_wout_boeen"]
+            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
 
             # Tokenize
             for j in range(len(context)):
-                context[j] = torch.tensor(self._tokenizer.stoi_context(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._tokenizer.stoi_targets("<start> " + targets[j] + " <stop>"))
+                context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
+                targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
             targets = nn.utils.rnn.pad_sequence(
@@ -63,67 +63,50 @@ class Evaluator:
             context = torch.concat(context)
 
             # Create batch
-            batch = self._batchify(context, targets, self._config["block_size"])
+            batch = utils.batchify(context, targets, self._config["block_size"], DEVICE)
 
-            # Move tensors 
-            targets = targets.to(device=DEVICE)
-            context = context.to(device=DEVICE)
-            
-            for j in range(0, targets.shape[1] - self._config["block_size"]):
-                inputs = targets[:, j:j+self._config["block_size"]]
-                labels = targets[:, j+1:j+1+self._config["block_size"]]
-
-                prediction = model(context, inputs)
+            for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
+                # Move tensors 
+                contexts = contexts.to(device=DEVICE)
+                inputs = inputs.to(device=DEVICE)
+                labels = labels.to(device=DEVICE)
+    
+                prediction = model(contexts, inputs)
                 
-            total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
-            labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
-            total_loss += self._loss(prediction, labels)
+                total_loss_values += torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
+                labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
+                #labels[labels == self._target_tokenizer.unknown_idx] = self._target_tokenizer.padding_idx
+
+                total_loss += self._loss(prediction, labels)
                 
         return {"loss": (total_loss / total_loss_values).item()}
-
-    @staticmethod
-    def _batchify(context: torch.tensor, targets: torch.tensor, block_size: int) -> Dict:
-        batch_inputs = []
-        batch_labels = []
-        batch_context = []
-        
-        for j in range(0, targets.shape[1] - block_size):
-            batch_inputs.append(targets[:, j:j+block_size])
-            batch_labels.append(targets[:, j+1:j+1+block_size])
-            batch_context.append(context)
-
-        batch = {
-            "context": torch.concat(batch_context),
-            "inputs": torch.concat(batch_inputs),
-            "labels": torch.concat(batch_labels)
-        }
-        
-        return batch
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    parser.add_argument("--model_params", type=str, help="Which model params to use")
-    #parser.add_argument("--model", type=str, choices=["transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
-    parser.add_argument("--tokenizer", type=str, choices=["dummy", "bert"], default="dummy", help="Which tokenizer to use for the report")
+    parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
+    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
+
     
     args = parser.parse_args()
         
     config = {
         "dataset": args.dataset_path,
         "model_weights": args.model_weights,
-        "model_params": args.model_params,
+        "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
         "cached": args.cache_data,
-        "model": "lstm", #args.model,
-        "batch_size": 5,
-        "block_size": 20
+        "batch_size": 10,
+        "block_size": 20,
+        "tokenizer": args.tokenizer,
+        "num_workers": args.num_workers,
+        "target": args.target
     }
 
-    model = LSTM.from_params(config["model_params"])
+    model = TransformerFactory.from_file(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 

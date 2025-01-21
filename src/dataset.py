@@ -65,7 +65,7 @@ class WeatherDataset(Dataset):
     
     @staticmethod
     def _load_files(path: str) -> List[str]:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
         
     def _cache_data(self) -> List[Dict]:
