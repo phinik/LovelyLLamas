@@ -64,8 +64,6 @@ class Transformer(nn.Module):
             nhead=self._params["n_head"],
             custom_encoder=EncoderFactory.get(self._params),
             custom_decoder=DecoderFactory.get(self._params),
-            #num_decoder_layers=self._params["n_layers"],
-            #num_encoder_layers=self._params["n_layers"], 
             activation=self._params["activation"],
             dim_feedforward=self._params["dim_feedforward"], 
             dropout=self._params["dropout"], 
