@@ -1,10 +1,10 @@
 {
-    "name": "dummy_config",
+    "name": "dummy_config_bi",
     "embedding_dim": 16,
     "hidden_dim": 16,
     "num_layers": 1,
     "dropout": 0.1,
-    "bidirectional": false,
+    "bidirectional": true,
     "tgt_emb_prj_weight_sharing": false,
     "positional_encoding": true,
     "attention": true,

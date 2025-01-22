@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import os
 import json
+import math
 
 class LSTM(nn.Module):
     ''' A sequence-to-sequence model using an LSTM architecture. '''
@@ -20,7 +21,10 @@ class LSTM(nn.Module):
                  dropout: float = 0.1,
                  bidirectional: bool = False,
                  tgt_emb_prj_weight_sharing: bool = True,
-                 positional_encoding: bool = True):
+                 positional_encoding: bool = True,
+                 attention: bool = False,
+                 label_smoothing: float = 0.0,
+                 use_layer_norm: bool = True):
 
         super(LSTM, self).__init__()
 
@@ -33,6 +37,8 @@ class LSTM(nn.Module):
             raise ValueError("Dropout rate must be between 0 and 1.")
         if tgt_emb_prj_weight_sharing and embedding_dim != hidden_dim:
             raise ValueError("When using the weight sharing mechanism, the hidden dimension must be equal to the embedding dimension.")
+        if not (0 <= label_smoothing < 1):
+            raise ValueError("Label smoothing must be between 0 and 1.")
 
         self._params_dict = {
             "src_vocab_size": src_vocab_size,
@@ -46,6 +52,9 @@ class LSTM(nn.Module):
             "bidirectional": bidirectional,
             "tgt_emb_prj_weight_sharing": tgt_emb_prj_weight_sharing,
             "positional_encoding": positional_encoding,
+            "attention": attention,
+            "label_smoothing": label_smoothing,
+            "use_layer_norm": use_layer_norm,
             "name": name
         }
 
@@ -60,9 +69,14 @@ class LSTM(nn.Module):
         self._embedding_tgt = nn.Embedding(tgt_vocab_size, embedding_dim, padding_idx=tgt_pad_idx)
         self._embedding_dropout = nn.Dropout(dropout)
 
-        # Normalization
-        self.layer_norm_enc = nn.LayerNorm(hidden_dim * 2 if bidirectional else hidden_dim)
-        self.layer_norm_dec = nn.LayerNorm(hidden_dim)
+        # Positional Encoding
+        self.positional_encoding = PositionalEncoding(embedding_dim) if positional_encoding else None
+
+        # Layer Normalization (optional)
+        self.use_layer_norm = use_layer_norm
+        if use_layer_norm:
+            self.layer_norm_enc = nn.LayerNorm(hidden_dim * 2 if bidirectional else hidden_dim)
+            self.layer_norm_dec = nn.LayerNorm(hidden_dim)
 
         # Encoder
         self.encoder = nn.LSTM(
@@ -74,9 +88,6 @@ class LSTM(nn.Module):
             batch_first=True
         )
 
-        # Positional Encoding
-        self.positional_encoding = PositionalEncoding(embedding_dim) if positional_encoding else None
-
         # Decoder
         self.decoder = nn.LSTM(
             input_size=embedding_dim,
@@ -86,6 +97,9 @@ class LSTM(nn.Module):
             bidirectional=False, # Decoder is always uni-directional
             batch_first=True
         )
+
+        # Attention (optional)
+        self.attention = BahdanauAttention(hidden_dim) if attention else None
 
         # Projection Layer
         self.fc = nn.Linear(hidden_dim, tgt_vocab_size)
@@ -104,7 +118,7 @@ class LSTM(nn.Module):
                 nn.init.xavier_normal_(param)
             elif "bias" in name:  # Bias terms are typically 1D
                 nn.init.constant_(param, 0)
-   
+
     def forward(self, src_seq, tgt_seq):
         # Source Embedding
         src_emb = self._embedding_src(src_seq)
@@ -113,11 +127,11 @@ class LSTM(nn.Module):
 
         # Encode Source Sequence
         enc_output, (hidden, cell) = self.encoder(src_emb)
-        enc_output = self.layer_norm_enc(enc_output)
+        if self.use_layer_norm:
+            enc_output = self.layer_norm_enc(enc_output)
 
         if self.encoder.bidirectional:
             # Combine bidirectional hidden states
-            # arams_dict["hidden_dim"])
             hidden = combine_bidirectional_states(hidden, self.encoder.num_layers, self._params_dict["hidden_dim"])
             cell = combine_bidirectional_states(cell, self.encoder.num_layers, self._params_dict["hidden_dim"])
 
@@ -128,14 +142,20 @@ class LSTM(nn.Module):
 
         # Decode Target Sequence
         dec_output, _ = self.decoder(tgt_emb, (hidden, cell))
-        dec_output = self.layer_norm_dec(dec_output)
+        if self.use_layer_norm:
+            dec_output = self.layer_norm_dec(dec_output)
 
-        flattened_dec_output = dec_output.reshape(-1, dec_output.size(-1))
+        # Apply Attention if enabled
+        if self.attention:
+            dec_output, _ = self.attention(dec_output, enc_output)
 
         # Project to Vocabulary Space
-        seq_logit = self.fc(flattened_dec_output)
+        seq_logit = self.fc(dec_output) # (B, T, vocab_size)
 
-        return seq_logit.view(-1, seq_logit.size(1))
+        # Reshape to match CrossEntropyLoss expectations
+        seq_logit = seq_logit.view(-1, seq_logit.size(-1)) # (B * T, vocab_size)
+
+        return seq_logit
 
     def save_weights_as(self, dir: str, filename: str):
         """ Save the model weights to a file. """
@@ -143,7 +163,7 @@ class LSTM(nn.Module):
 
     def load_weights_from(self, path: str):
         """ Load the model weights from a file. """
-        self.load_state_dict(torch.load(path, weights_only=True))
+        self.load_state_dict(torch.load(path))
 
     def save_params_to(self, path: str):
         """ Save the model parameters to a JSON file. """
@@ -159,7 +179,6 @@ class LSTM(nn.Module):
         return LSTM(**params)
 
 # Utility functions
-@staticmethod
 def get_pad_mask(seq: torch.Tensor, pad_idx: int) -> torch.Tensor:
     """ Create a mask for padding elements in a sequence. """
     return (seq != pad_idx).unsqueeze(-2)
@@ -169,8 +188,6 @@ def combine_bidirectional_states(states: torch.Tensor, num_layers, hidden_dim) -
     states = states.view(num_layers, 2, -1, hidden_dim)
     states = states[:, 0, :, :] + states[:, 1, :, :]  # Combine forward and backward
     return states.view(num_layers, -1, hidden_dim)
-
-import math
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embedding_dim: int, max_len: int = 5000):
@@ -195,3 +212,24 @@ class PositionalEncoding(nn.Module):
         """
         x = x + self.pe[:, :x.size(1), :]
         return x
+
+class BahdanauAttention(nn.Module):
+    def __init__(self, hidden_dim: int):
+        super(BahdanauAttention, self).__init__()
+        self.query_layer = nn.Linear(hidden_dim, hidden_dim)
+        self.key_layer = nn.Linear(hidden_dim, hidden_dim)
+        self.energy_layer = nn.Linear(hidden_dim, 1)
+
+    def forward(self, query: torch.Tensor, values: torch.Tensor):
+        """
+        Compute the attention weights and context vector.
+        :param query: Decoder hidden state (batch_size, seq_len, hidden_dim)
+        :param values: Encoder outputs (batch_size, seq_len, hidden_dim)
+        :return: Context vector and attention weights
+        """
+        query = self.query_layer(query)
+        keys = self.key_layer(values)
+        energy = torch.tanh(query.unsqueeze(2) + keys.unsqueeze(1))
+        attention = torch.softmax(self.energy_layer(energy).squeeze(-1), dim=-1)
+        context = torch.bmm(attention, values)
+        return context, attention

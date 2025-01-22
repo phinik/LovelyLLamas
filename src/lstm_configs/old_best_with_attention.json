@@ -1,7 +1,7 @@
 {
-    "name": "dummy_config",
-    "embedding_dim": 16,
-    "hidden_dim": 16,
+    "name": "dummy_config_big",
+    "embedding_dim": 64,
+    "hidden_dim": 128,
     "num_layers": 1,
     "dropout": 0.1,
     "bidirectional": false,
