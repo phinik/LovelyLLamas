@@ -25,7 +25,8 @@ class Evaluator:
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
             num_workers=self._config["num_workers"],
-            cached=self._config["cached"]
+            cached=self._config["cached"],
+            overview=self._config["overview"]
         )
 
         # Tokenizer
@@ -90,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
     parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
+    parser.add_argument("--overview", type=str, choices=["full", "ctpc", "ctc", "ct", "tpwc"], default="full", required=True, help="What overview to use")
 
     
     args = parser.parse_args()
@@ -103,7 +105,8 @@ if __name__ == "__main__":
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "num_workers": args.num_workers,
-        "target": args.target
+        "target": args.target,
+        "overview": args.overview
     }
 
     model = TransformerFactory.from_file(config["model_params"])
