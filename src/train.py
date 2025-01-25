@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, required=True, help="Path to dataset root")
     parser.add_argument("--checkpoints_path", type=str, required=True, help="Where to store checkpoints")
     parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
-    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer"], help="Which model to use")
+    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer", "full_rope_transformer"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
