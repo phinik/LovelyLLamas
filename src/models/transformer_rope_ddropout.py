@@ -315,8 +315,8 @@ class RoPETransformerEncoderLayer(nn.TransformerEncoderLayer):
         # see Fig. 1 of https://arxiv.org/pdf/2002.04745v1.pdf
         x = src
         if self.norm_first:
-            orig_x = x[0, ...].squeeze()
-            rope_x = x[1, ...].squeeze()
+            orig_x = x[0, ...]
+            rope_x = x[1, ...]
             
             normed_orig_x = self.norm1(orig_x)
             normed_rope_x = self._normRoPE(rope_x)
@@ -396,8 +396,8 @@ class RoPETransformerDecoderLayer(nn.TransformerDecoderLayer):
     ) -> torch.Tensor:
         x = tgt
         if self.norm_first:
-            orig_x = x[0, ...].squeeze()
-            rope_x = x[1, ...].squeeze()
+            orig_x = x[0, ...]
+            rope_x = x[1, ...]
             
             normed_orig_x = self.norm1(orig_x)
             normed_rope_x = self._normRoPE(rope_x)

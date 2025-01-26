@@ -42,7 +42,7 @@ class TransformerFactory:
             return RoPETransformerDropout.from_params(path)
         elif model_type == RoPETransformerDDropout.NAME:
             return RoPETransformerDDropout.from_params(path)
-        elif model_type == RoPETransformerDDropout.NAME:
+        elif model_type == FullRoPETransformer.NAME:
             return FullRoPETransformer.from_params(path)
         else:
             raise KeyError(f"Unkonwn 'model_type' {model_type}")
