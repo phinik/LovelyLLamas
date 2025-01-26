@@ -65,7 +65,7 @@ class ReduceKeys:
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        reduced_set_of_keys = ["city", "overview", "report_short_wout_boeen", "report_short", "gpt_rewritten_cleaned"]
+        reduced_set_of_keys = ["city", "overview", "report_short_wout_boeen", "report_short", "gpt_rewritten_cleaned", "temperatur_in_deg_C"]
 
         reduced_dict = {}
         for key in reduced_set_of_keys:
