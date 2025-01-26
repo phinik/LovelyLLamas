@@ -1,6 +1,8 @@
 import numpy as np
+import re
 
 from abc import ABC, abstractmethod
+from typing import Dict
 
 from evaluate import load
 
@@ -48,19 +50,19 @@ class Rouge(IMetric):
         self._scores_rouge_2 = []
         self._scores_rouge_l = []
 
-    def update(self, prediction: str, label: str) -> None:
+    def update(self, prediction: str, label: str, context: Dict) -> None:
         # TODO: move into postprocessing       
         prediction = prediction.replace(".", "")
         prediction = prediction.replace(",", "")
         prediction = prediction.replace("!", "")
         prediction = prediction.replace("<stop>", "")
-        prediction = prediction.replace("  ", " ")
+        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
         prediction = prediction.strip()
 
         label = label.replace(".", "")
         label = label.replace(",", "")
         label = label.replace("!", "")
-        label = label.replace("  ", " ")
+        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
         label = label.strip()
     
         scores = self._scorer.compute(predictions=[prediction], references=[label])
@@ -88,19 +90,19 @@ class Bleu(IMetric):
     def reset(self) -> None:
         self._scores = []
 
-    def update(self, prediction: str, label: str) -> None:
+    def update(self, prediction: str, label: str, context: Dict) -> None:
         # TODO: move into postprocessing       
         prediction = prediction.replace(".", "")
         prediction = prediction.replace(",", "")
         prediction = prediction.replace("!", "")
         prediction = prediction.replace("<stop>", "")
-        prediction = prediction.replace("  ", " ")
+        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
         prediction = prediction.strip()
 
         label = label.replace(".", "")
         label = label.replace(",", "")
         label = label.replace("!", "")
-        label = label.replace("  ", " ")
+        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
         label = label.strip()
     
         scores = self._scorer.compute(predictions=[prediction], references=[label])
@@ -132,19 +134,19 @@ class BertScore(IMetric):
         self._scores_pre = []
         self._scores_rec = []
 
-    def update(self, prediction: str, label: str) -> None:
+    def update(self, prediction: str, label: str, context: Dict) -> None:
         # TODO: move into postprocessing       
         prediction = prediction.replace(".", "")
         prediction = prediction.replace(",", "")
         prediction = prediction.replace("!", "")
         prediction = prediction.replace("<stop>", "")
-        prediction = prediction.replace("  ", " ")
+        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
         prediction = prediction.strip()
 
         label = label.replace(".", "")
         label = label.replace(",", "")
         label = label.replace("!", "")
-        label = label.replace("  ", " ")
+        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
         label = label.strip()
 
         # Although stated differently in the documentation, a pre-computed idf-dict cannot be used. It's values are
@@ -160,3 +162,79 @@ class BertScore(IMetric):
         self._scores_f1.append(scores["f1"])
         self._scores_pre.append(scores["precision"])
         self._scores_rec.append(scores["recall"])   
+
+
+class CityAppearance(IMetric):
+    def __init__(self):       
+        self._n_samples = 0
+        self._n_samples_with_city = 0
+
+    @property
+    def name(self) -> str:
+        return "CityAppearance"
+    
+    def get(self) -> float:
+        return {
+            "accuracy": self._n_samples_with_city / self._n_samples
+        }
+
+    def reset(self) -> None:
+        self._n_samples = 0
+        self._n_samples_with_city = 0
+
+    def update(self, prediction: str, label: str, context: Dict) -> None:
+        # TODO: move into postprocessing       
+        prediction = prediction.replace(".", "")
+        prediction = prediction.replace(",", "")
+        prediction = prediction.replace("!", "")
+        prediction = prediction.replace("<stop>", "")
+        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
+        prediction = prediction.strip()
+
+        label = label.replace(".", "")
+        label = label.replace(",", "")
+        label = label.replace("!", "")
+        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
+        label = label.strip()
+
+        self._n_samples += 1
+        
+        if "<city>" in prediction:
+            self._n_samples_with_city += 1
+
+        
+class TemperatureCorrectness(IMetric):
+    def __init__(self):       
+        self._n_correct_temp = 0
+        self._n_incorrect_temp = 0
+
+    @property
+    def name(self) -> str:
+        return "TemperatureCorrectness"
+    
+    def get(self) -> float:
+        return {
+            "accuracy": self._n_correct_temp / (self._n_correct_temp + self._n_incorrect_temp)
+        }
+
+    def reset(self) -> None:
+        self._n_correct_temp = 0
+        self._n_incorrect_temp = 0
+
+    def update(self, prediction: str, label: str, context: Dict) -> None:
+        # TODO: move into postprocessing       
+        prediction = prediction.replace(".", "")
+        prediction = prediction.replace(",", "")
+        prediction = prediction.replace("!", "")
+        prediction = prediction.replace("<stop>", "")
+        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
+        prediction = prediction.strip()
+
+        temps = re.findall(r"[0-9]+", prediction)
+
+        for temp in temps:
+            if temp in context: #["temperatur_in_deg_C"]:
+                self._n_correct_temp += 1
+            else:
+                self._n_incorrect_temp += 1
+        

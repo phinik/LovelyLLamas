@@ -10,7 +10,8 @@ def get_train_dataloader_weather_dataset(
         batch_size: int, 
         num_workers: int, 
         cached: bool, 
-        n_samples: int = -1
+        n_samples: int = -1,
+        overview: str = "full"
     ) -> DataLoader:
     dset = WeatherDataset(
         path=path, 
@@ -19,7 +20,7 @@ def get_train_dataloader_weather_dataset(
             ReplaceNaNs(),
             ReplaceCityName(),
             TokenizeUnits(),
-            AssembleCustomOverview(),
+            OverviewFactory.get(overview),
             ReduceKeys()
         ]),
         cached=cached,
@@ -28,7 +29,13 @@ def get_train_dataloader_weather_dataset(
 
     return DataLoader(dset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-def get_eval_dataloader_weather_dataset(path: str, batch_size: int, num_workers: int, cached: bool) -> DataLoader:
+def get_eval_dataloader_weather_dataset(
+        path: str, 
+        batch_size: int, 
+        num_workers: int, 
+        cached: bool, 
+        overview: str = "full"
+    ) -> DataLoader:
     dset = WeatherDataset(
         path=path, 
         split=Split.EVAL,
@@ -36,7 +43,7 @@ def get_eval_dataloader_weather_dataset(path: str, batch_size: int, num_workers:
             ReplaceNaNs(),
             ReplaceCityName(),
             TokenizeUnits(),
-            AssembleCustomOverview(),
+            OverviewFactory.get(overview),
             ReduceKeys()
         ]),
         cached=cached
@@ -44,7 +51,7 @@ def get_eval_dataloader_weather_dataset(path: str, batch_size: int, num_workers:
 
     return DataLoader(dset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-def get_test_dataloader_weather_dataset(path: str, batch_size: int, cached: bool) -> DataLoader:
+def get_test_dataloader_weather_dataset(path: str, batch_size: int, cached: bool, overview: str = "full") -> DataLoader:
     dset = WeatherDataset(
         path=path, 
         split=Split.TEST,
@@ -52,7 +59,7 @@ def get_test_dataloader_weather_dataset(path: str, batch_size: int, cached: bool
             ReplaceNaNs(),
             ReplaceCityName(),
             TokenizeUnits(),
-            AssembleCustomOverview(),
+            OverviewFactory.get(overview),
             ReduceKeys()
         ]),
         cached=cached

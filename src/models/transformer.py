@@ -58,15 +58,12 @@ class Transformer(nn.Module):
         )
         
         self._pos_enc = PositionalEncoding(self._params["d_model"])
-        self._dropout = nn.Dropout(self._params["dropout"])
 
         self._model = nn.Transformer(
             d_model=self._params["d_model"],
             nhead=self._params["n_head"],
             custom_encoder=EncoderFactory.get(self._params),
             custom_decoder=DecoderFactory.get(self._params),
-            #num_decoder_layers=self._params["n_layers"],
-            #num_encoder_layers=self._params["n_layers"], 
             activation=self._params["activation"],
             dim_feedforward=self._params["dim_feedforward"], 
             dropout=self._params["dropout"], 

@@ -10,8 +10,8 @@ from torchtune.modules import RotaryPositionalEmbeddings
 from typing import Dict, Optional, Union, Callable
 
 
-class RoPETransformer(nn.Module):
-    NAME = "RoPETransformer"
+class RoPETransformerDropout(nn.Module):
+    NAME = "RoPETransformerDropout"
 
     def __init__(
             self, 
@@ -98,12 +98,12 @@ class RoPETransformer(nn.Module):
         src_emb = self._src_word_emb(src_seq)
         src_emb_rope = self._pos_enc(src_emb)
         src_emb, src_emb_rope = self._src_emb_dropout(src_emb, src_emb_rope)
-        src_emb_stack = torch.stack([src_emb, src_emb_rope])
+        src_emb_stack = torch.stack([src_emb_rope, src_emb_rope])
                 
         tgt_emb = self._tgt_word_emb(tgt_seq)
         tgt_emb_rope = self._pos_enc(tgt_emb)
         tgt_emb, tgt_emb_rope = self._tgt_emb_dropout(tgt_emb, tgt_emb_rope)
-        tgt_emb_stack = torch.stack([tgt_emb, tgt_emb_rope])
+        tgt_emb_stack = torch.stack([tgt_emb_rope, tgt_emb_rope])
 
         x = self._model(
             src_emb_stack, 
@@ -133,11 +133,11 @@ class RoPETransformer(nn.Module):
             json.dump(self._params, f, sort_keys=True, indent=4)
 
     @staticmethod
-    def from_params(path: str) -> RoPETransformer:
+    def from_params(path: str) -> RoPETransformerDropout:
         with open(path, 'r') as f:
             params = json.load(f)
 
-        return RoPETransformer(**params)
+        return RoPETransformerDropout(**params)
 
     @staticmethod
     def _get_pad_mask(seq, pad_idx):
@@ -466,6 +466,6 @@ class RoPEDropout(nn.Module):
             p_map = torch.ones_like(x) * self._prob
             mask = torch.bernoulli(p_map)
 
-            return x * mask, rope_x * mask
+            return x , rope_x * mask
         else:
             return x, rope_x
