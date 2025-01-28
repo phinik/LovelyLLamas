@@ -24,7 +24,7 @@ wheels/
 get-pip.py
 
 # React
-node_modules/
+demo/frontend/node_modules/
 dist/
 
 # Cython
