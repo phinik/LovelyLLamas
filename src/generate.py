@@ -7,7 +7,7 @@ import os
 from typing import Dict
 
 from src.dataloader import *
-from src.models import Transformer
+from src.models import TransformerFactory
 from src.tokenizer import ContextTokenizer, TokenizerFactory
 #import src.determinism
 
@@ -36,7 +36,7 @@ class Generator:
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
             context = batch["overview"].copy()
 
-            target_str = "gpt_rewritten_cleaned" if self._config["target"] == "gpt" else "report_short_wout_boeen"
+            target_str = "gpt_rewritten_apokalyptisch" if self._config["target"] == "gpt" else "report_short_wout_boeen"
             targets = batch[target_str].copy()
 
             # Tokenize
@@ -67,7 +67,6 @@ class Generator:
                 else:
                     prediction = prediction[-1, :]
                     next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
-
                 token_sequence.append(next_token.item())
 
                 if j < self._config["block_size"]:
@@ -79,13 +78,60 @@ class Generator:
                 k += 1
             
             print(120*'#')
-            print(f"Target: {batch[target_str][0]}")
+            print(f"Target: {batch[target_str][0].replace('<city>', batch['city'][0])}")
             print(f"Predic: {self._target_tokenizer.itos(token_sequence).replace('<city>', batch['city'][0])}")
             for j in range(0, 192, 8):
                 print(f"Overview: {batch['overview'][0].split(';')[j:j+8]}")
             print(120*'#')
-            if i == 5:
+            if i == 0:
                 exit()
+
+    @torch.no_grad()
+    def get(self, model, id: int):
+        model.eval()
+
+        batch = self._test_dataloader.__getitem__(id)
+        context = batch["overview"].copy()
+
+        # Tokenize
+        for j in range(len(context)):
+            context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
+        
+        context = context[0]
+        
+        context = context.to(device=DEVICE)
+            
+        running_input = torch.zeros(size=(1, self._config["block_size"] + 1), dtype=context.dtype).to(DEVICE)
+        running_input[0, 0] = self._target_tokenizer.start_idx
+        token_sequence = []
+
+        j = 0
+        k = 0
+        while running_input[0, -2] != self._target_tokenizer.stop_idx and k < 200:
+            prediction = model(context, running_input[:, :self._config["block_size"]])
+
+            if j < self._config["block_size"]:
+                prediction = prediction[j, :]
+                next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
+                j += 1
+            else:
+                prediction = prediction[-1, :]
+                next_token = torch.multinomial(F.softmax(prediction, dim=0), 1)
+            token_sequence.append(next_token.item())
+
+            if j < self._config["block_size"]:
+                running_input[0, j] = next_token 
+            else:
+                running_input[0, -1] = next_token
+                running_input = torch.roll(running_input, -1, dims=1)
+                
+            k += 1
+            
+        generated_sequence = self._target_tokenizer.itos(token_sequence)
+        generated_sequence.replace("<city>", batch["city"][0])
+        generated_sequence.replace("<degC>", "°C")
+        
+        return generated_sequence
 
 
 
@@ -113,7 +159,7 @@ if __name__ == "__main__":
         "target": args.target
     }
 
-    model = Transformer.from_params(config["model_params"])
+    model = TransformerFactory.from_file(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 
