@@ -25,6 +25,7 @@ get-pip.py
 
 # React
 node_modules/
+dist/
 
 # Cython
 *.c
