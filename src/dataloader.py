@@ -66,3 +66,18 @@ def get_test_dataloader_weather_dataset(path: str, batch_size: int, cached: bool
     )
 
     return DataLoader(dset, batch_size=batch_size, shuffle=True)
+
+
+def get_demo_weather_dataset(path: str, overview: str = "full") -> WeatherDataset:
+    return WeatherDataset(
+        path=path, 
+        split=Split.TEST,
+        transformations=TransformationPipeline([
+            ReplaceNaNs(),
+            ReplaceCityName(),
+            TokenizeUnits(),
+            OverviewFactory.get(overview),
+            ReduceKeys()
+        ]),
+        cached=True
+    )
