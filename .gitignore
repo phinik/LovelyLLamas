@@ -30,6 +30,7 @@ get-pip.py
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+batches/
 
 # Environment
 .env
@@ -46,3 +47,4 @@ htmlcov/
 # Models
 *.model
 *.vocab
+*.pth
