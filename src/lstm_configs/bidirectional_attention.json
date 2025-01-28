@@ -1,10 +1,10 @@
 {
-    "name": "dummy_config_big",
-    "embedding_dim": 64,
+    "name": "best_transformer",
+    "embedding_dim": 32,
     "hidden_dim": 64,
     "num_layers": 1,
     "dropout": 0.1,
-    "bidirectional": false,
+    "bidirectional": true,
     "tgt_emb_prj_weight_sharing": false,
     "positional_encoding": true,
     "attention": true,

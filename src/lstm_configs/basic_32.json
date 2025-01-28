@@ -1,0 +1,13 @@
+{
+    "name": "dummy_config",
+    "embedding_dim": 32,
+    "hidden_dim": 32,
+    "num_layers": 1,
+    "dropout": 0.1,
+    "bidirectional": false,
+    "tgt_emb_prj_weight_sharing": false,
+    "positional_encoding": true,
+    "attention": true,
+    "label_smoothing": 0.1,
+    "use_layer_norm": true
+}

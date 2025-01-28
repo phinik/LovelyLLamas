@@ -99,10 +99,17 @@ class LSTM(nn.Module):
         )
 
         # Attention (optional)
-        self.attention = BahdanauAttention(hidden_dim) if attention else None
+        if attention:
+            enc_hidden_dim = hidden_dim * 2 if bidirectional else hidden_dim
+            self.attention = BahdanauAttention(enc_hidden_dim, hidden_dim)
+        else:
+            self.attention = None
 
         # Projection Layer
-        self.fc = nn.Linear(hidden_dim, tgt_vocab_size)
+        if self.attention and self.encoder.bidirectional:
+            self.fc = nn.Linear(2 * hidden_dim, tgt_vocab_size)
+        else:
+            self.fc = nn.Linear(hidden_dim, tgt_vocab_size)
 
         # Initialize Weights
         self.initialize_weights()
@@ -150,10 +157,10 @@ class LSTM(nn.Module):
             dec_output, _ = self.attention(dec_output, enc_output)
 
         # Project to Vocabulary Space
-        seq_logit = self.fc(dec_output) # (B, T, vocab_size)
+        seq_logit = self.fc(dec_output)  # (B, T, vocab_size)
 
         # Reshape to match CrossEntropyLoss expectations
-        seq_logit = seq_logit.view(-1, seq_logit.size(-1)) # (B * T, vocab_size)
+        seq_logit = seq_logit.view(-1, seq_logit.size(-1))  # (B * T, vocab_size)
 
         return seq_logit
 
@@ -212,24 +219,24 @@ class PositionalEncoding(nn.Module):
         """
         x = x + self.pe[:, :x.size(1), :]
         return x
-
+    
 class BahdanauAttention(nn.Module):
-    def __init__(self, hidden_dim: int):
+    def __init__(self, enc_hidden_dim: int, dec_hidden_dim: int):
         super(BahdanauAttention, self).__init__()
-        self.query_layer = nn.Linear(hidden_dim, hidden_dim)
-        self.key_layer = nn.Linear(hidden_dim, hidden_dim)
-        self.energy_layer = nn.Linear(hidden_dim, 1)
+        self.query_layer = nn.Linear(dec_hidden_dim, dec_hidden_dim)
+        self.key_layer = nn.Linear(enc_hidden_dim, dec_hidden_dim)
+        self.energy_layer = nn.Linear(dec_hidden_dim, 1)
 
     def forward(self, query: torch.Tensor, values: torch.Tensor):
         """
         Compute the attention weights and context vector.
-        :param query: Decoder hidden state (batch_size, seq_len, hidden_dim)
-        :param values: Encoder outputs (batch_size, seq_len, hidden_dim)
+        :param query: Decoder hidden state (batch_size, seq_len, dec_hidden_dim)
+        :param values: Encoder outputs (batch_size, seq_len, enc_hidden_dim)
         :return: Context vector and attention weights
         """
-        query = self.query_layer(query)
-        keys = self.key_layer(values)
-        energy = torch.tanh(query.unsqueeze(2) + keys.unsqueeze(1))
-        attention = torch.softmax(self.energy_layer(energy).squeeze(-1), dim=-1)
-        context = torch.bmm(attention, values)
+        query = self.query_layer(query)  # (batch_size, seq_len, dec_hidden_dim)
+        keys = self.key_layer(values)    # (batch_size, seq_len, dec_hidden_dim)
+        energy = torch.tanh(query.unsqueeze(2) + keys.unsqueeze(1))  # (batch_size, seq_len, seq_len, dec_hidden_dim)
+        attention = torch.softmax(self.energy_layer(energy).squeeze(-1), dim=-1)  # (batch_size, seq_len, seq_len)
+        context = torch.bmm(attention, values)  # (batch_size, seq_len, enc_hidden_dim)
         return context, attention

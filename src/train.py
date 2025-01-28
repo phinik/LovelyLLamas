@@ -33,7 +33,9 @@ class Trainer:
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
             num_workers=self._config["num_workers"],
-            cached=self._config["cached"]
+            cached=self._config["cached"],
+            overview=self._config["overview"],
+            n_samples=self._config["num_samples"]
         )
 
         # Tokenizer
@@ -176,12 +178,14 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, required=True, help="Path to dataset root")
     parser.add_argument("--checkpoints_path", type=str, required=True, help="Where to store checkpoints")
     parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
-    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer", "lstm"], help="Which model to use")
+    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer", "full_rope_transformer", "lstm"], help="Which model to use")
     parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
     parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
+    parser.add_argument("--overview", type=str, choices=["full", "ctpc", "ctc", "ct", "tpwc"], default="full", help="What overview to use")
+    parser.add_argument("--num_samples", type=int, default=-1, choices=[-1, 100, 200, 400, 800, 1600, 3200, 6400], help="How many samples to use during training")
 
     args = parser.parse_args()
     
@@ -198,7 +202,9 @@ if __name__ == "__main__":
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
         "num_workers": args.num_workers,
-        "target": args.target
+        "target": args.target,
+        "overview": args.overview,
+        "num_samples": args.num_samples
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)

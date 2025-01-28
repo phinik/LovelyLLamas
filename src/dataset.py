@@ -46,6 +46,7 @@ class WeatherDataset(Dataset):
             self._full_path = os.path.join(self._path, f"dset_{self._split.value[0]}_{n_samples}.json")
 
         self._files = self._load_files(self._full_path)
+        print(f" [DATASET] Loaded {len(self._files)} files from {self._full_path}")
 
         self._cached_data = None
         if self._cached:
