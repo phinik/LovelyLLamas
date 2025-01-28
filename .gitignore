@@ -37,6 +37,7 @@ batches/
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+demo/backend/dataset/
 
 # Environment
 .env

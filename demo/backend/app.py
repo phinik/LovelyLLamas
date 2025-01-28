@@ -1,15 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
+import json
 app = Flask(__name__)
 CORS(app)
 
-# Mock data
-CITIES = [
-    "New York", "London", "Paris", "Tokyo", "Sydney", "Berlin", "Madrid",
-    "Rome", "Amsterdam", "Singapore", "Hong Kong", "Dubai", "Toronto",
-    "San Francisco", "Mumbai", "Barcelona", "Vienna", "Prague", "Stockholm"
-]
+with open('files.json', 'r') as f:
+    files = json.load(f)
+    # concatenate city with id
+    CITIES = [f"{value['city']} ({value['id']})" for key, value in files.items()]
 
 @app.route('/api/mock-llm', methods=['POST'])
 def mock_llm_response():
