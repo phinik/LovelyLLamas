@@ -90,15 +90,12 @@ class Generator:
     def get(self, model, id: int):
         model.eval()
 
-        batch = self._test_dataloader.__getitem__(id)
-        context = batch["overview"].copy()
+        batch = get_demo_weather_dataset(self._config["dataset"])[id]
+        context = batch["overview"]
 
         # Tokenize
-        for j in range(len(context)):
-            context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
-        
-        context = context[0]
-        
+        context = torch.tensor(self._context_tokenizer.stoi(context)).unsqueeze(0)
+                
         context = context.to(device=DEVICE)
             
         running_input = torch.zeros(size=(1, self._config["block_size"] + 1), dtype=context.dtype).to(DEVICE)
@@ -128,8 +125,8 @@ class Generator:
             k += 1
             
         generated_sequence = self._target_tokenizer.itos(token_sequence)
-        generated_sequence.replace("<city>", batch["city"][0])
-        generated_sequence.replace("<degC>", "°C")
+        generated_sequence = generated_sequence.replace("<city>", batch["city"])
+        generated_sequence = generated_sequence.replace(" <degC>", "°C")
         
         return generated_sequence
 
@@ -164,4 +161,6 @@ if __name__ == "__main__":
     model.to(DEVICE)
 
     generator = Generator(config)
-    generator.sample(model)
+    #generator.sample(model=model)
+
+    print(generator.get(model, 1))
