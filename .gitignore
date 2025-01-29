@@ -37,7 +37,10 @@ batches/
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
-demo/backend/dataset/
+demo/backend/data/
+demo/backend/assets/
+demo/backend/src_model/
+demo/backend/generate.py
 
 # Environment
 .env
