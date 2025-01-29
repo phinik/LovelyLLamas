@@ -28,10 +28,16 @@ get-pip.py
 *.cpp
 *.pyd
 
+# React
+node_modules/
+npm-debug.log
+dist/
+
 # Data
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+batches/
 
 # Environment
 .env
@@ -44,3 +50,8 @@ ENV/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Models
+*.model
+*.vocab
+*.pth
