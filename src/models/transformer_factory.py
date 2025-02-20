@@ -7,6 +7,7 @@ from .transformer_rope import RoPETransformer
 from .transformer_rope_dropout import RoPETransformerDropout
 from .transformer_rope_ddropout import RoPETransformerDDropout
 from .transformer_rope_full import FullRoPETransformer
+from .transformer_classifier import TransformerClassifier
 
 
 class TransformerFactory:
@@ -25,6 +26,8 @@ class TransformerFactory:
             return RoPETransformerDDropout(**params)
         elif model_type == "full_rope_transformer":
             return FullRoPETransformer(**params)
+        elif model_type == "transformer_classifier":
+            return TransformerClassifier(**params)
         else:
             raise KeyError(f"Unkonwn 'model_type' {model_type}")
         
@@ -44,5 +47,7 @@ class TransformerFactory:
             return RoPETransformerDDropout.from_params(path)
         elif model_type == FullRoPETransformer.NAME:
             return FullRoPETransformer.from_params(path)
+        elif model_type == TransformerClassifier.NAME:
+            return TransformerClassifier.from_params(path)
         else:
             raise KeyError(f"Unkonwn 'model_type' {model_type}")
