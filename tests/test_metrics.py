@@ -117,7 +117,7 @@ class TestTemperatureRange(unittest.TestCase):
     def test_returned_score_is_the_mean_of_individual_scores(self):
         metric = TemperatureRange()
         metric.update("in <city> ist es 5 <degC>. Tagsüber 7 <degC>. Temperature über 10 <degC>", [], "", "", ["7", "8", "11"])
-        metric.update("in <city> ist es 5 <degC>. Tagsüber 7 <degC>. Temperature über 10 <degC>", [], "", "", ["1", "2", "5", "7"])
+        metric.update("in <city> ist es -5 <degC>. Tagsüber -7 <degC>. Temperature über -10 <degC>", [], "", "", ["-1", "-2", "-5", "-7"])
 
         self.assertAlmostEqual(7 / 12, metric.get()["mean_score"])
     
