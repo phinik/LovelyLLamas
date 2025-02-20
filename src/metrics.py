@@ -330,7 +330,7 @@ class TemperatureRange(IMetric):
 
         # Assumption: any numeric value in the report is a temperature value
         # Find all numeric values in the report and convert them to integer
-        pred_temps = re.findall(r"[0-9]+", prediction)
+        pred_temps = re.findall(r"-?[0-9]+", prediction)
         pred_temps = [int(t) for t in pred_temps]
 
         # Convert all context temperature values to integer
