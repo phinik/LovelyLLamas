@@ -4,7 +4,6 @@ from typing import Dict, List
 
 
 class ReplaceNaNs:
-    # Replace NaNs with a specified token
     def __init__(self, missing_token: str = '<missing>'):
         self._missing_token = missing_token
 
@@ -25,24 +24,20 @@ class ReplaceNaNs:
                     new_values.append(v)
             data[key] = new_values
 
-        #data = {k: v if v is not None else self.missing_token for k, v in data.items()}
-
         return data
 
 
 class TokenizeUnits:
-    # Tokenize units in the 'report_short', 'report_long', and 'overview' fields
     def __init__(self, unit_map: Dict[str, str] = None):
         self.unit_map = unit_map or {
             '°C': ' <degC>',
-            #'°': ' <degC>',
             'l/m²': ' <l_per_sqm>',
             'km/h': ' <kmh>',
             '%': ' <percent>'
         }
 
     def __call__(self, data: Dict) -> Dict:
-        for key in ['report_short', 'report_short_wout_boeen', "gpt_rewritten_cleaned"]:
+        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned"]:
             for unit, token in self.unit_map.items():
                 data[key] = data[key].replace(unit, token)
 
@@ -50,12 +45,11 @@ class TokenizeUnits:
 
 
 class ReplaceCityName:
-    # Replace the city name in the 'report_short' field with a specified token
     def __init__(self):
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        for key in ['report_short', 'report_short_wout_boeen', "gpt_rewritten_cleaned"]:
+        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned"]:
             data[key] = data[key].replace(data['city'], '<city>')
         return data
 
@@ -65,7 +59,7 @@ class ReduceKeys:
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        reduced_set_of_keys = ["city", "overview", "report_short_wout_boeen", "report_short", "gpt_rewritten_cleaned", "temperatur_in_deg_C"]
+        reduced_set_of_keys = ["city", "overview", "report_short_wout_boeen", "gpt_rewritten_cleaned", "temperatur_in_deg_C"]
 
         reduced_dict = {}
         for key in reduced_set_of_keys:
