@@ -99,7 +99,11 @@ class TestReduceKeys(unittest.TestCase):
     def test_correct_keys_result(self):
         test_dict = {
             "city": "",
-            "overview": "", 
+            "overview_full": "", 
+            "overview_ctpc": "", 
+            "overview_ctc": "", 
+            "overview_ct": "",
+            "overview_tpwc": "", 
             "report_short_wout_boeen": "",
             "gpt_rewritten_cleaned": "",
             "temperatur_in_deg_C": "",
@@ -111,7 +115,8 @@ class TestReduceKeys(unittest.TestCase):
         transformed_test_dict = transform(test_dict)
 
         self.assertEqual(
-            ["city", "overview", "report_short_wout_boeen", "gpt_rewritten_cleaned", "temperatur_in_deg_C"],
+            ["city", "overview_full", "overview_ctpc", "overview_ctc", "overview_ct", "overview_tpwc",
+             "report_short_wout_boeen", "gpt_rewritten_cleaned", "temperatur_in_deg_C"],
             list(transformed_test_dict.keys())
         )
 

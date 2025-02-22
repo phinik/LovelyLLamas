@@ -1,18 +1,5 @@
 import re
 
-from typing import Dict, List
-
-
-class PostProcessingPipeline:
-    def __init__(self, transforms: List):
-        self._transforms = transforms
-
-    def __call__(self, data: Dict) -> Dict:
-        for transform in self._transforms:
-            data = transform(data)
-
-        return data
-
 
 class ReplaceCityToken:
     """
@@ -80,7 +67,7 @@ class CombineNegativeTemperatures:
         pass
 
     def __call__(self, s: str) -> str:
-        return re.sub(r" (-) ([0-9]+)", " \1\2", s)
+        return re.sub(r" (-) ([0-9]+)", r" \1\2", s)
     
 
 class StripSpaces:
