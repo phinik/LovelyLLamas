@@ -37,7 +37,7 @@ class Trainer:
 
         # Tokenizer
         self._context_tokenizer = ContextTokenizer(self._config["dataset"])
-        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], "default")
 
         # Model
         with open(self._config["model_config"], "r") as f:
@@ -107,8 +107,9 @@ class Trainer:
     def _train_epoch(self, epoch: int):
         self._model.train()
 
+        overview_str = utils.OverviewSelector.select(self._config["overview"])
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
-            context = batch["overview"]
+            context = batch[overview_str]
             targets_class_0 = batch["class_0"]
             targets_class_1 = batch["class_1"]
 
@@ -180,9 +181,7 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
-    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
     parser.add_argument("--overview", type=str, choices=["full", "ctpc", "ctc", "ct", "tpwc"], default="full", help="What overview to use")
-    parser.add_argument("--num_samples", type=int, default=-1, choices=[-1, 100, 200, 400, 800, 1600, 3200, 6400], help="How many samples to use during training")
 
     args = parser.parse_args()
     
@@ -191,7 +190,6 @@ if __name__ == "__main__":
         "dataset": args.dataset_path,
         "checkpoints": os.path.join(args.checkpoints_path, args.name),
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
-        "cached": True,
         "model": "transformer_classifier",
         "batch_size": 10,
         "epochs": 100,
@@ -199,9 +197,7 @@ if __name__ == "__main__":
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
         "num_workers": args.num_workers,
-        "target": args.target,
         "overview": args.overview,
-        "num_samples": args.num_samples
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)

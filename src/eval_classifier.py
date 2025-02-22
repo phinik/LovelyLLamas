@@ -30,7 +30,7 @@ class EvaluatorClassifier:
 
         # Tokenizer
         self._context_tokenizer = ContextTokenizer(self._config["dataset"])
-        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], "default")
 
         # Loss
         self._loss = BCELoss()
@@ -94,10 +94,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="dummy", help="Which tokenizer to use for the report")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
-    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
     parser.add_argument("--overview", type=str, choices=["full", "ctpc", "ctc", "ct", "tpwc"], default="full", required=True, help="What overview to use")
 
     
@@ -107,12 +105,10 @@ if __name__ == "__main__":
         "dataset": args.dataset_path,
         "model_weights": args.model_weights,
         "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
-        "cached": args.cache_data,
         "batch_size": 10,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "num_workers": args.num_workers,
-        "target": args.target,
         "overview": args.overview
     }
 
