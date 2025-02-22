@@ -80,7 +80,7 @@ class ReduceKeys:
 
 class AssembleFullOverview:
     def __init__(self):
-        print(f" [OVERVIEW] FULL")
+        pass
 
     def __call__(self, data: Dict) -> Dict:
         s = ""
@@ -111,7 +111,7 @@ class AssembleOverviewCTPC:
     CTPC => Clearness, Temperature, Precipitation, Cloudiness
     """
     def __init__(self):
-        print(f" [OVERVIEW] CTPC")
+        pass
 
     def __call__(self, data: Dict) -> Dict:
         s = ""
@@ -140,7 +140,7 @@ class AssembleOverviewCTC:
     CTC => Clearness, Temperature, Cloudiness
     """
     def __init__(self):
-        print(f" [OVERVIEW] CTC")
+        pass
 
     def __call__(self, data: Dict) -> Dict:
         s = ""
@@ -167,7 +167,7 @@ class AssembleOverviewCT:
     CT => Clearness, Temperature
     """
     def __init__(self):
-        print(f" [OVERVIEW] CT")
+        pass
 
     def __call__(self, data: Dict) -> Dict:
         s = ""
@@ -193,7 +193,7 @@ class AssembleOverviewTPWC:
     TPWC => Temperature, Precipitation, Wind, Cloudiness
     """
     def __init__(self):
-        print(f" [OVERVIEW] TPWC")
+        pass
 
     def __call__(self, data: Dict) -> Dict:
         s = ""
