@@ -3,6 +3,32 @@ import torch
 from typing import Dict
 
 
+class OverviewSelector:
+    def __init__(self):
+        pass
+        
+    @staticmethod
+    def select(overview_type: str):
+        assert overview_type in ["full", "ctpc", "ctc", "ct", "tpwc"], f"Unknown overview type {overview_type}"
+
+        return f"overview_{overview_type}"
+
+class TargetSelector:
+    def __init__(self):
+        pass
+        
+    @staticmethod
+    def select(target_type: str):
+        assert target_type in ["gpt", "default"], f"Unknown overview type {target_type}"
+
+        if target_type == "gpt":
+            return "gpt_rewritten_cleaned"
+        elif target_type == "default":
+            return "report_short_wout_boeen"
+        else:
+            raise KeyError(f"Unknown overview type {target_type}")
+        
+
 def batchify(context: torch.tensor, targets: torch.tensor, block_size: int, device: torch.device) -> Dict:
         input_seqs = []
         label_seqs = []
