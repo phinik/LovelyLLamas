@@ -59,7 +59,17 @@ class ReduceKeys:
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        reduced_set_of_keys = ["city", "overview", "report_short_wout_boeen", "gpt_rewritten_cleaned", "temperatur_in_deg_C"]
+        reduced_set_of_keys = [
+            "city", 
+            "overview_full",
+            "overview_ctpc",
+            "overview_ctc",
+            "overview_ct",
+            "overview_tpwc", 
+            "report_short_wout_boeen", 
+            "gpt_rewritten_cleaned", 
+            "temperatur_in_deg_C"
+        ]
 
         reduced_dict = {}
         for key in reduced_set_of_keys:
@@ -91,7 +101,7 @@ class AssembleFullOverview:
             
             s += f"{time};{clearness};{temp};{rain_risk};{rain_amount};{wind_direction};{wind_speed};{cloudiness}"
        
-        data["overview"] = s
+        data["overview_full"] = s
          
         return data
     
@@ -120,7 +130,7 @@ class AssembleOverviewCTPC:
             
             s += f"{time};{clearness};{temp};{rain_risk};{rain_amount};{cloudiness}"
        
-        data["overview"] = s
+        data["overview_ctpc"] = s
          
         return data
     
@@ -147,7 +157,7 @@ class AssembleOverviewCTC:
             
             s += f"{time};{clearness};{temp};{cloudiness}"
        
-        data["overview"] = s
+        data["overview_ctc"] = s
          
         return data
     
@@ -173,7 +183,7 @@ class AssembleOverviewCT:
             
             s += f"{time};{clearness};{temp}"
        
-        data["overview"] = s
+        data["overview_ct"] = s
          
         return data
     
@@ -203,28 +213,6 @@ class AssembleOverviewTPWC:
             
             s += f"{time};{temp};{rain_risk};{rain_amount};{wind_direction};{wind_speed};{cloudiness}"
        
-        data["overview"] = s
+        data["overview_tpwc"] = s
          
         return data
-    
-
-class OverviewFactory:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def get(overview_type: str):
-        assert overview_type in ["full", "ctpc", "ctc", "ct", "tpwc"], f"Unknown overview type {overview_type}"
-
-        if overview_type == "full":
-            return AssembleFullOverview()
-        elif overview_type == "ctpc":
-            return AssembleOverviewCTPC()
-        elif overview_type == "ctc":
-            return AssembleOverviewCTC()
-        elif overview_type == "ct":
-            return AssembleOverviewCT()
-        elif overview_type == "tpwc":
-            return AssembleOverviewTPWC()
-        else:
-            raise KeyError(f"Unknown overview type {overview_type}")
