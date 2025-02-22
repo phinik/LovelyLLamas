@@ -24,8 +24,7 @@ class EvaluatorClassifier:
         self._eval_dataloader = get_eval_dataloader_weather_dataset_classifier(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
-            num_workers=self._config["num_workers"],
-            overview=self._config["overview"]
+            num_workers=self._config["num_workers"]
         )
 
         # Tokenizer

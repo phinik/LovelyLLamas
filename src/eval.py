@@ -25,8 +25,7 @@ class Evaluator:
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
             num_workers=self._config["num_workers"],
-            cached=self._config["cached"],
-            overview=self._config["overview"]
+            cached=self._config["cached"]
         )
 
         # Tokenizer

@@ -33,7 +33,6 @@ class Trainer:
             batch_size=self._config["batch_size"],
             num_workers=self._config["num_workers"],
             cached=self._config["cached"],
-            overview=self._config["overview"],
             n_samples=self._config["num_samples"]
         )
 
