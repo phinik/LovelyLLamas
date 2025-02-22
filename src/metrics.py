@@ -3,12 +3,13 @@ import re
 import torch
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict
 
 from evaluate import load
 
 from src.models import TransformerFactory
 from src.tokenizer import ContextTokenizer
+from src.data_postprocessing import RemovePunctutation
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -34,7 +35,7 @@ class IMetric(ABC):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict, 
         temperature: List[str]
     ) -> None:
         pass
@@ -47,6 +48,8 @@ class Rouge(IMetric):
         self._scores_rouge_1 = []  # Rouge-1
         self._scores_rouge_2 = []  # Rouge-2
         self._scores_rouge_l = []  # Rouge-L
+
+        self._transform = RemovePunctutation()
 
     @property
     def name(self) -> str:
@@ -69,22 +72,11 @@ class Rouge(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
-
-        label = label.replace(".", "")
-        label = label.replace(",", "")
-        label = label.replace("!", "")
-        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
-        label = label.strip()
+        prediction = self._transform(prediction)
+        label = self._transform(label)
     
         scores = self._scorer.compute(predictions=[prediction], references=[label])
 
@@ -98,6 +90,8 @@ class Bleu(IMetric):
         self._scorer = load("bleu")
         
         self._scores = []  # BLEU score
+
+        self._transform = RemovePunctutation()
 
     @property
     def name(self) -> str:
@@ -116,22 +110,11 @@ class Bleu(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
-
-        label = label.replace(".", "")
-        label = label.replace(",", "")
-        label = label.replace("!", "")
-        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
-        label = label.strip()
+        prediction = self._transform(prediction)
+        label = self._transform(label)
     
         scores = self._scorer.compute(predictions=[prediction], references=[label])
 
@@ -145,6 +128,8 @@ class BertScore(IMetric):
         self._scores_f1 = []  # F1 score
         self._scores_pre = []  # Precision
         self._scores_rec = []  # Recall
+
+        self._transform = RemovePunctutation()
 
     @property
     def name(self) -> str:
@@ -167,22 +152,11 @@ class BertScore(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
-
-        label = label.replace(".", "")
-        label = label.replace(",", "")
-        label = label.replace("!", "")
-        label = re.sub(f"[ ]{2,}", r" ", label)  # make sure that there are only single spaces
-        label = label.strip()
+        prediction = self._transform(prediction)
+        label = self._transform(label)
 
         # Although stated differently in the documentation, a pre-computed idf-dict cannot be used. It's values are
         # simply ignored and it appears that the scorer computes idf-scores itself and uses these values instead.
@@ -204,6 +178,8 @@ class CityAppearance(IMetric):
         self._n_samples = 0
         self._n_samples_with_city = 0
 
+        self._transformation = RemovePunctutation()
+
     @property
     def name(self) -> str:
         return "CityAppearance"
@@ -222,16 +198,10 @@ class CityAppearance(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
+        prediction = self._transformation(prediction)
 
         self._n_samples += 1
         
@@ -243,6 +213,8 @@ class TemperatureCorrectness(IMetric):
     def __init__(self):       
         self._n_correct_temp = 0
         self._n_incorrect_temp = 0
+
+        self._transform = RemovePunctutation()
 
     @property
     def name(self) -> str:
@@ -262,17 +234,11 @@ class TemperatureCorrectness(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(f"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
-
+        prediction = self._transform(prediction)
+        
         # Assumption: any numeric value in the report is a temperature value
         temps = re.findall(r"-?[0-9]+", prediction)
 
@@ -286,6 +252,8 @@ class TemperatureCorrectness(IMetric):
 class TemperatureRange(IMetric):
     def __init__(self):       
         self._scores = []
+
+        self._transform = RemovePunctutation()
 
     @property
     def name(self) -> str:
@@ -304,18 +272,10 @@ class TemperatureRange(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        # TODO: move into postprocessing       
-        prediction = prediction.replace(".", "")
-        prediction = prediction.replace(",", "")
-        prediction = prediction.replace("!", "")
-        prediction = prediction.replace("<stop>", "")
-        prediction = re.sub(r"[ ]{2,}", r" ", prediction)  # make sure that there are only single spaces
-        prediction = prediction.strip()
-
-        prediction = re.sub(r" (-) ([0-9]+)", " \1\2", prediction)
+        prediction = self._transform(prediction)
 
         # "relative intersection" inspired by IoU
         # Weather reports are not required to state the overall daily minimum and maximum temperature. Hence, IoU 
@@ -357,8 +317,8 @@ class CustomClassifier(IMetric):
     def __init__(self, dataset_path=str): 
         self._scores = []
 
-        model_params = "./checkpoints/classifier/params.json"
-        model_weights = "./checkpoints/classifier/best_model_CE_loss.pth"
+        model_params = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert/params.json"
+        model_weights = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert/best_model_CE_loss.pth"
         self._block_size = 20
 
         self._model = TransformerFactory.from_file(model_params)
@@ -370,7 +330,7 @@ class CustomClassifier(IMetric):
 
     @property
     def name(self) -> str:
-        return "CustomClassifier"
+        return "CustomClassifierFull"
     
     def get(self) -> float:
         return {
@@ -385,10 +345,10 @@ class CustomClassifier(IMetric):
         prediction: str, 
         tokenized_prediction: List[int], 
         label: str, 
-        context: str, 
+        contexts: Dict,
         temperature: List[str]
     ) -> None:
-        tokenized_context = self._context_tokenizer.stoi(context)
+        tokenized_context = self._context_tokenizer.stoi(contexts["overview_full"])
 
         # Get sequences of size 'block_size'
         pred_seq = []
@@ -415,5 +375,70 @@ class CustomClassifier(IMetric):
         outputs = torch.nn.functional.sigmoid(outputs)
 
         # Compute and store score
-        self._scores.append(torch.mean(outputs).item())      
+        self._scores.append(torch.mean(outputs).item())     
+
+
+class CustomClassifierCT(IMetric):
+    def __init__(self, dataset_path=str): 
+        self._scores = []
+
+        model_params = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert_ct/params.json"
+        model_weights = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert_ct/best_model_CE_loss.pth"
+        self._block_size = 20
+
+        self._model = TransformerFactory.from_file(model_params)
+        self._model.load_weights_from(model_weights)
+        self._model.to(DEVICE)
+
+        # Tokenizer
+        self._context_tokenizer = ContextTokenizer(dataset_path)
+
+    @property
+    def name(self) -> str:
+        return "CustomClassifierCT"
+    
+    def get(self) -> float:
+        return {
+            "mean_score": np.mean(self._scores)
+        }
+
+    def reset(self) -> None:
+        self._scores = []
+
+    def update(
+        self, 
+        prediction: str, 
+        tokenized_prediction: List[int], 
+        label: str, 
+        contexts: Dict,
+        temperature: List[str]
+    ) -> None:
+        tokenized_context = self._context_tokenizer.stoi(contexts["overview_ct"])
+
+        # Get sequences of size 'block_size'
+        pred_seq = []
+        context_seq = []
+
+        if len(tokenized_prediction) < self._block_size:
+            pred_seq.append(torch.tensor(tokenized_prediction).unsqueeze(0))
+            context_seq.append(torch.tensor(tokenized_context).unsqueeze(0))
+        else:
+            for i in range(0, len(tokenized_prediction) - self._block_size + 1):
+                pred_seq.append(torch.tensor(tokenized_prediction[i:i+self._block_size]).unsqueeze(0))
+                context_seq.append(torch.tensor(tokenized_context).unsqueeze(0))
+      
+        # Create a single batch of sequences
+        inputs = torch.cat(pred_seq)
+        contexts = torch.cat(context_seq)
+
+        # Move batch
+        inputs = inputs.to(DEVICE)
+        contexts = contexts.to(DEVICE)
+
+        # Classify batch
+        outputs = self._model(contexts, inputs)
+        outputs = torch.nn.functional.sigmoid(outputs)
+
+        # Compute and store score
+        self._scores.append(torch.mean(outputs).item())
         
