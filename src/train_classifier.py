@@ -68,6 +68,8 @@ class Trainer:
 
         self._evaluator = EvaluatorClassifier(config=config.copy())
         
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
 
     def train(self):
         best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
@@ -107,9 +109,8 @@ class Trainer:
     def _train_epoch(self, epoch: int):
         self._model.train()
 
-        overview_str = utils.OverviewSelector.select(self._config["overview"])
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
-            context = batch[overview_str]
+            context = batch[self._overview_str]
             targets_class_0 = batch["class_0"]
             targets_class_1 = batch["class_1"]
 

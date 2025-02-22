@@ -9,6 +9,7 @@ from typing import Dict
 from src.dataloader import *
 from src.models import TransformerFactory
 from src.tokenizer import ContextTokenizer, TokenizerFactory
+from src import utils
 #import src.determinism
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -29,15 +30,19 @@ class Generator:
         self._context_tokenizer = ContextTokenizer(self._config["dataset"])
         self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
+        self._target_str = utils.TargetSelector.select(self._config["target"])
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+
+        print(f" [TARGET] {self._target_str.upper()}")
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
+
     @torch.no_grad()
     def sample(self, model):
         model.eval()
 
         for i, batch in enumerate(tqdm.tqdm(self._test_dataloader)):
-            context = batch["overview"].copy()
-
-            target_str = "gpt_rewritten_apokalyptisch" if self._config["target"] == "gpt" else "report_short_wout_boeen"
-            targets = batch[target_str].copy()
+            context = batch[self._overview_str].copy()
+            targets = batch[self._target_str].copy()
 
             # Tokenize
             for j in range(len(context)):
@@ -78,10 +83,10 @@ class Generator:
                 k += 1
             
             print(120*'#')
-            print(f"Target: {batch[target_str][0].replace('<city>', batch['city'][0])}")
+            print(f"Target: {batch[self._target_str][0].replace('<city>', batch['city'][0])}")
             print(f"Predic: {self._target_tokenizer.itos(token_sequence).replace('<city>', batch['city'][0])}")
             for j in range(0, 192, 8):
-                print(f"Overview: {batch['overview'][0].split(';')[j:j+8]}")
+                print(f"Overview: {batch[self._overview_str][0].split(';')[j:j+8]}")
             print(120*'#')
             if i == 0:
                 exit()

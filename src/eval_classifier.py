@@ -35,6 +35,9 @@ class EvaluatorClassifier:
         # Loss
         self._loss = BCELoss()
 
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
+
     @torch.no_grad()
     def evaluate(self, model) -> Dict:
         model.eval()
@@ -43,7 +46,7 @@ class EvaluatorClassifier:
         total_loss_values = 0
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
-            context = batch["overview"]
+            context = batch[self._overview_str]
             targets_class_0 = batch["class_0"]
             targets_class_1 = batch["class_1"]
 

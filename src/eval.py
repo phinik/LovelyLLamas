@@ -36,6 +36,12 @@ class Evaluator:
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
+        self._target_str = utils.TargetSelector.select(self._config["target"])
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+
+        print(f" [TARGET] {self._target_str.upper()}")
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
+
     @torch.no_grad()
     def evaluate(self, model) -> Dict:
         model.eval()
@@ -44,8 +50,8 @@ class Evaluator:
         total_loss_values = 0
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
-            context = batch["overview"]
-            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
+            context = batch[self._overview_str]
+            targets = batch[self._target_str]
 
             # Tokenize
             for j in range(len(context)):

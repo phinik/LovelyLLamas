@@ -71,6 +71,11 @@ class Trainer:
 
         self._evaluator = Evaluator(config=config.copy())
         
+        self._target_str = utils.TargetSelector.select(self._config["target"])
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+
+        print(f" [TARGET] {self._target_str.upper()}")
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
 
     def train(self):
         best_model_by_loss = BestModel("CE_loss", OptDirection.MINIMIZE, self._config["checkpoints"])
@@ -111,8 +116,8 @@ class Trainer:
         self._model.train()
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
-            context = batch["overview"]
-            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
+            context = batch[self._overview_str]
+            targets = batch[self._target_str]
 
             # Tokenize
             for j in range(len(context)):
@@ -134,14 +139,6 @@ class Trainer:
             batch = utils.batchify(context, targets, self._config["block_size"], DEVICE)
 
             for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
-                # Move tensors 
-                #contexts = contexts.to(device=DEVICE)
-                #inputs = inputs.to(device=DEVICE)
-                #print(inputs.device, labels.device)
-                #print(inputs.storage().data_ptr(), labels.storage().data_ptr())
-                #exit()
-                #labels = labels.to(device=DEVICE)
-
                 self._optimizer.zero_grad()
 
                 prediction = self._model(contexts, inputs)
