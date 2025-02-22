@@ -41,6 +41,8 @@ class Trainer:
         self._context_tokenizer = ContextTokenizer(self._config["dataset"])
         self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
 
+
+        # Model
         with open(self._config["model_config"], "r") as f:
             c = json.load(f)
             
