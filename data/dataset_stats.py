@@ -1,46 +1,54 @@
 import argparse
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 import os
-import matplotlib.pyplot as plt
+import re
 
-from typing import List, Set
+from typing import List, Set, Dict
 
 
-def load_reports(dataset: str) -> List[str]:
-    reports = []
-
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
-        
-        files = os.listdir(dir_path)
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
+def load_data(dataset: str, key: str) -> List[Dict]:
+    split_files = ["dset_train.json", "dset_eval.json", "dset_test.json"]
+    
+    files = []
+    for split_file in split_files:
+        with open(os.path.join(dataset, split_file), "r") as f:
+            files_in_split = json.load(f)
+            files += files_in_split
             
-            report = file_content["report_short"]
-            report = report.replace(file_content["city"], "<city>")
-            report = report.replace("°C", " <degC>")
-            report = report.replace("km/h", " <kmh>")
-            report = report.replace(".", "")
+    data = []
+    for file in files:
+        with open(os.path.join(dataset, file), "r") as f:
+            content = json.load(f)
+            
+            if key in content.keys():
+                data.append(content)
+            
+    return data   
 
-            reports.append(report)
 
-    return reports   
+def get_prepped_report(data: Dict, key: str) -> str:
+    report = data[key]
+    report = report.replace(data["city"], "<city>")
+    report = report.replace("°C", " <degC>")
+    
+    report = re.sub(r"[.,;:?!]", r"", report)
+
+    return report
 
 
-def determine_vocab(reports: List[str]) -> Set:
+def vocab(data: List[Dict], key: str) -> Set:
     vocab = set()
 
-    for report in reports:
+    for point in data:
+        report = get_prepped_report(point, key)
+        
+        word_candidates = report.split()
+        
         contained_words = []
-
-        words = report.split()
-        for word in words:
-            try:
-                _ = float(word)  # exclude any numbers
-            except ValueError:
+        for word in word_candidates:
+            if not re.match(r"-?[0-9]+", word):  # do not include numbers
                 contained_words.append(word)
         contained_words = set(contained_words)
 
@@ -49,100 +57,100 @@ def determine_vocab(reports: List[str]) -> Set:
     return vocab
 
 
-def determine_report_lengths(reports: List[str]) -> List:
+def report_lengths(data: List[Dict], key: str) -> List:
     lengths = []
 
-    for report in reports:
-        lengths.append(len(report.split()))
+    for point in data:
+        report = get_prepped_report(point, key)
 
+        lengths.append(len(report.split()))
+        
     return lengths
 
 
-def load_cities(dataset: str) -> Set[str]:
+def cities(data: List[Dict]) -> Set[str]:
     cities = []
 
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
-        
-        files = os.listdir(dir_path)
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
-            
-            city = file_content["city"]
-            
-            cities.append(city)
+    for point in data:  
+        cities.append(point["city"])
 
     return set(cities)
 
 
-def determine_report_sentence_lengths(dataset: str) -> List[int]:
-    lengths = []
+def number_of_sentences(data: List[Dict], key: str) -> List[int]:
+    n_sentences = []
 
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
-        
-        files = os.listdir(dir_path)
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
+    for point in data:
+        report = point[key]
+
+        n_sentences.append(report.count("."))
+
+    return n_sentences   
+
+
+def nans_in_context(data: List[Dict]) -> float:
+    keys = [
+        "times", "clearness", "temperatur_in_deg_C", "niederschlagsrisiko_in_perc", 
+        "niederschlagsmenge_in_l_per_sqm", "windrichtung", "windgeschwindigkeit_in_km_per_h", "bewölkungsgrad"
+    ]
+    
+    n_tot = 0
+    n_nan = 0
+    for point in data:                              
+        for key in keys:
+            n_tot += len(point[key])
+
+            for v in point[key]:
+                try:
+                    if np.isnan(v):
+                        n_nan += 1
+                    else:
+                        continue
+                except TypeError:
+                    continue
             
-            report = file_content["report_short"]
-            lengths.append(report.count("."))
-
-    return lengths   
-
-
-def determine_amount_of_nans_in_context(dataset: str) -> float:
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
-        
-        files = os.listdir(dir_path)
-        n_tot = 0
-        n_nan = 0
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
-            
-            keys = [
-                "clearness", "temperatur_in_deg_C", "niederschlagsrisiko_in_perc", "niederschlagsmenge_in_l_per_sqm", 
-                "windrichtung", "windgeschwindigkeit_in_km_per_s", "bewölkungsgrad"
-                ]
-            
-            for key in keys:
-                n_tot += len(file_content[key])
-                n_nan += len([v for v in file_content[key] if v in ["None", "none", None, "nan", "NaN", "Nan"]])
-                #print([v for v in file_content[key] if v in ["None", "none", None, "nan", "NaN", "Nan"]])
-                
     return n_nan / n_tot
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True)
+    parser.add_argument("--key", type=str, required=True)
 
     args = parser.parse_args()
 
-    reports = load_reports(args.dataset)
-    print("Total number: ", len(reports))
+    data = load_data(args.dataset, args.key)
+    print("Total number: ", len(data))
 
-    reports_lengths = determine_report_lengths(reports)
+    reports_lengths = report_lengths(data, args.key)
     print("Avg length: ", np.mean(reports_lengths))
     
-    vocab = determine_vocab(reports)   
-    print("Vocab size reports: ", len(vocab))
+    vocab = vocab(data, args.key)   
+    print("Vocab size: ", len(vocab))
 
-    cities = load_cities(args.dataset)
-    print("# cities: ", len(cities))
+    cities = cities(data)
+    print("# Cities: ", len(cities))
 
-    report_sentence_length = determine_report_sentence_lengths(args.dataset)
-    print("Report avg sentence length: ", np.mean(report_sentence_length))
+    number_of_sentences = number_of_sentences(data, args.key)
+    print("Avg # sentences: ", np.mean(number_of_sentences))
 
-    amount_of_nans = determine_amount_of_nans_in_context(args.dataset)
-    print("Fraction of nans: ", amount_of_nans)
+    nans_in_context = nans_in_context(data)
+    print("% Nans in context: ", nans_in_context * 100)
+
+    stats_dict = {
+        "key": args.key,
+        "number_of_files": len(data),
+        "avg_length": np.mean(reports_lengths),
+        "vocab_size": len(vocab),
+        "n_cities": len(cities),
+        "avg_n_sentences": np.mean(number_of_sentences),
+        "perc_nans_in_context": nans_in_context * 100
+    }
+
+    with open(os.path.join(args.dataset, f"{args.key}_stats.json"), 'w') as f:
+        json.dump(stats_dict, f, indent=4)
+
+    np.savez(os.path.join(args.dataset, f"{args.key}_stats"), lengths=reports_lengths, n_sentences=number_of_sentences)
 
     plt.hist(reports_lengths, bins=20)
     plt.show()

@@ -1,8 +1,9 @@
 import argparse
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 import os
-import matplotlib.pyplot as plt
+import re
 
 from typing import List, Dict
 
@@ -19,7 +20,7 @@ def load_filenames(dataset: str) -> List[str]:
     return files
 
 
-def load_reports(dataset: str, files: List[str]) -> List[str]:
+def load_reports(dataset: str, files: List[str], key: str) -> List[str]:
     reports = []
 
     for file in files:
@@ -28,23 +29,20 @@ def load_reports(dataset: str, files: List[str]) -> List[str]:
         with open(os.path.join(path), "r") as f:
             file_content = json.load(f)
             
-        # report = file_content["report_short_wout_boeen"]
-        # report = report.replace(file_content["city"], "<city>")
-        # report = report.replace("°C", "")
-        # report = report.replace("km/h", "")
-        # report = report.replace(".", "")
-        # report = report.replace(",", "")
+        reports.append(get_prepped_report(file_content, key))
 
-        report = file_content["gpt_rewritten_cleaned"]
-        report = report.replace(file_content["city"], "<city>")
-        for symbol in [".", ",", ";", "!", "?", ":"]:
-            report = report.replace(symbol, "")
-        report = report.replace("°C", "")
-        report = report.replace("km/h", "")
+    return reports
 
-        reports.append(report)
 
-    return reports    
+def get_prepped_report(data: Dict, key: str) -> str:
+    report = data[key]
+    report = report.replace(data["city"], "<city>")
+    report = report.replace("°C", "")
+    
+    report = re.sub(r"[.,;:?!]", r"", report)  # exclude punctuation
+    report = re.sub(r"-?[0-9]+", r"<number>", report)  # exclude numbers
+
+    return report
 
 
 def count_occurances(reports: List[str]) -> Dict:
@@ -56,23 +54,20 @@ def count_occurances(reports: List[str]) -> Dict:
         report_tf_counts = {}
         words = report.split()
         for word in words:
-            try:
-                _ = float(word)  # exclude any numbers
-            except ValueError:
-                report_tf_counts[word] = report_tf_counts.get(word, 0) + 1
+            report_tf_counts[word] = report_tf_counts.get(word, 0) + 1
         tf_counts.append(report_tf_counts)
         
         # update term in documents counts
         for word in report_tf_counts.keys():
             idf_counts[word] = idf_counts.get(word, 0) + 1
 
-    for word, count in idf_counts.copy().items():
-        if count < 5:
-            idf_counts.pop(word, None)
-            for report in tf_counts:
-                report.pop(word, None)
+    # for word, count in idf_counts.copy().items():
+    #     if count < 5:
+    #         idf_counts.pop(word, None)
+    #         for report in tf_counts:
+    #             report.pop(word, None)
 
-    print(len(idf_counts))
+    # print(len(idf_counts))
 
     return {"idf_counts": idf_counts, "tf_counts": tf_counts}
 
@@ -120,7 +115,7 @@ def calculate_mean_top_x_similarity(x: int, similarities: np.array) -> np.array:
     # sort similarities row-wise in ascending order
     sorted_sims = np.sort(similarities, axis=1)
     
-    # compute the mean of the 10 highest similarity values for each report (excluding the similarity of the report with
+    # compute the mean of the x highest similarity values for each report (excluding the similarity of the report with
     # itself)
     return np.mean(sorted_sims[:, -(x+1):-1], axis=1)
 
@@ -128,23 +123,26 @@ def calculate_mean_top_x_similarity(x: int, similarities: np.array) -> np.array:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True)
+    parser.add_argument("--key", type=str, required=True)
 
     args = parser.parse_args()
 
     filenames = load_filenames(args.dataset)
-    reports = load_reports(args.dataset, filenames)
+    reports = load_reports(args.dataset, filenames, args.key)
     
-    print("counting")
+    print("Counting...")
     counts = count_occurances(reports)
    
-    print("similarity")
+    print("Computing similarity...")
     similarities = calculate_similarity(counts)
     
-    mean_top_x_similarity = calculate_mean_top_x_similarity(50, similarities)
-    print(mean_top_x_similarity)
+    x = 50
+    mean_top_x_similarity = calculate_mean_top_x_similarity(x, similarities)
+    print(f"Mean top {x} similarity: ", np.mean(mean_top_x_similarity))
+    
+    np.save(os.path.join(args.dataset, f"{args.key}_top_{x}_similarity"), mean_top_x_similarity)
 
     plt.hist(mean_top_x_similarity, bins=np.arange(0, 1.025, 0.025))
-    print(np.mean(mean_top_x_similarity))
     plt.ylabel("Counts", fontsize=18)
     plt.xlabel("Mean Top 50 Cosine Similarity (TF-IDF)", fontsize=18)
     ax = plt.gca()
