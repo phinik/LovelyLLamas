@@ -12,10 +12,10 @@ from typing import Dict
 from src.best_model import BestModel, OptDirection
 from src.early_stopping import EarlyStopping, OptDirection as ESOptDirection
 from src.dataloader import *
-from src.loss import CELoss
+from src.loss import BCELoss
 from src.models import TransformerFactory
 from src.tokenizer import TokenizerFactory, ContextTokenizer
-from src.eval import Evaluator
+from src.eval_classifier import EvaluatorClassifier
 from src import utils
 import src.determinism
 
@@ -28,18 +28,15 @@ class Trainer:
         self._config = config
 
         # Dataloader
-        self._train_dataloader = get_train_dataloader_weather_dataset(
+        self._train_dataloader = get_train_dataloader_weather_dataset_classifier(
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
-            num_workers=self._config["num_workers"],
-            cached=self._config["cached"],
-            n_samples=self._config["num_samples"]
+            num_workers=self._config["num_workers"]
         )
 
         # Tokenizer
         self._context_tokenizer = ContextTokenizer(self._config["dataset"])
-        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], self._config["target"])
-
+        self._target_tokenizer = TokenizerFactory.get(self._config["dataset"], self._config["tokenizer"], "default")
 
         # Model
         with open(self._config["model_config"], "r") as f:
@@ -58,7 +55,7 @@ class Trainer:
         print(f" [N ELEM] {sum([param.nelement() for param in self._model.parameters()])}")
 
         # Loss
-        self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
+        self._loss = BCELoss()
 
         # Optimization
         self._optimizer = torch.optim.AdamW(self._model.parameters(), weight_decay=1e-8)
@@ -68,12 +65,9 @@ class Trainer:
         # Tensorboard
         self._writer = SummaryWriter(log_dir=self._config["tensorboard"])
 
-        self._evaluator = Evaluator(config=config.copy())
+        self._evaluator = EvaluatorClassifier(config=config.copy())
         
-        self._target_str = utils.TargetSelector.select(self._config["target"])
         self._overview_str = utils.OverviewSelector.select(self._config["overview"])
-
-        print(f" [TARGET] {self._target_str.upper()}")
         print(f" [OVERVIEW] {self._overview_str.upper()}")
 
     def train(self):
@@ -116,16 +110,24 @@ class Trainer:
 
         for i, batch in enumerate(tqdm.tqdm(self._train_dataloader)):
             context = batch[self._overview_str]
-            targets = batch[self._target_str]
+            targets_class_0 = batch["class_0"]
+            targets_class_1 = batch["class_1"]
 
             # Tokenize
             for j in range(len(context)):
                 context[j] = torch.tensor(self._context_tokenizer.stoi(context[j])).unsqueeze(0)
-                targets[j] = torch.tensor(self._target_tokenizer.stoi(self._target_tokenizer.add_start_stop_tokens(targets[j])))
+                targets_class_0[j] = torch.tensor(self._target_tokenizer.stoi(targets_class_0[j]))
+                targets_class_1[j] = torch.tensor(self._target_tokenizer.stoi(targets_class_1[j]))
 
             # Pad target sequences to have equal length and transform the list of tensors into a single tensor.
-            targets = nn.utils.rnn.pad_sequence(
-                targets, 
+            targets_class_0 = nn.utils.rnn.pad_sequence(
+                targets_class_0, 
+                padding_value=self._target_tokenizer.padding_idx, 
+                batch_first=True
+            )
+
+            targets_class_1 = nn.utils.rnn.pad_sequence(
+                targets_class_1, 
                 padding_value=self._target_tokenizer.padding_idx, 
                 batch_first=True
             )
@@ -135,18 +137,23 @@ class Trainer:
             context = torch.concat(context)
 
             # Create batch
-            batch = utils.batchify(context, targets, self._config["block_size"], DEVICE)
+            batch = utils.batchify_classifier(
+                context=context, 
+                targets_class_0=targets_class_0, 
+                targets_class_1=targets_class_1, 
+                block_size=self._config["block_size"], 
+                pad_idx=self._target_tokenizer.padding_idx, 
+                device=DEVICE
+            )
 
             for contexts, inputs, labels in zip(batch["context"], batch["inputs"], batch["labels"]):
                 self._optimizer.zero_grad()
 
-                prediction = self._model(contexts, inputs)
-
-                n_loss_values = torch.sum(torch.where(labels != self._target_tokenizer.padding_idx, 1, 0))
-                labels = labels.view(labels.shape[0] * labels.shape[1])  # B * T
-                #labels[labels == self._target_tokenizer.unknown_idx] = self._target_tokenizer.padding_idx
+                predictions = self._model(contexts, inputs)
+                predictions = nn.functional.sigmoid(predictions)
                 
-                loss = self._loss(prediction, labels) / n_loss_values
+                loss = self._loss(predictions, labels) / labels.shape[0]
+
                 loss.backward()
 
                 self._optimizer.step()
@@ -171,14 +178,10 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, required=True, help="Path to dataset root")
     parser.add_argument("--checkpoints_path", type=str, required=True, help="Where to store checkpoints")
     parser.add_argument("--tensorboard_path", type=str, required=True, help="Where to store tensorboard summary")
-    parser.add_argument("--model", type=str, required=True, choices=["og_transformer", "rope_transformer", "full_rope_transformer"], help="Which model to use")
-    parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
     parser.add_argument("--model_config", type=str, required=True, help="What transformer model configuration to use")
     parser.add_argument("--num_workers", type=int, default=4, help="How many workers to use for dataloading")
-    parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
     parser.add_argument("--overview", type=str, choices=["full", "ctpc", "ctc", "ct", "tpwc"], default="full", help="What overview to use")
-    parser.add_argument("--num_samples", type=int, default=-1, choices=[-1, 100, 200, 400, 800, 1600, 3200, 6400], help="How many samples to use during training")
 
     args = parser.parse_args()
     
@@ -187,17 +190,14 @@ if __name__ == "__main__":
         "dataset": args.dataset_path,
         "checkpoints": os.path.join(args.checkpoints_path, args.name),
         "tensorboard": os.path.join(args.tensorboard_path, args.name),
-        "cached": args.cache_data,
-        "model": args.model,
+        "model": "transformer_classifier",
         "batch_size": 10,
         "epochs": 100,
         "block_size": 20,
         "tokenizer": args.tokenizer,
         "model_config": args.model_config,
         "num_workers": args.num_workers,
-        "target": args.target,
         "overview": args.overview,
-        "num_samples": args.num_samples
     }
 
     os.makedirs(config["checkpoints"], exist_ok=True)

@@ -45,10 +45,11 @@ class TestWeatherDataset(unittest.TestCase):
             "niederschlagsrisiko_in_perc",
             "niederschlagsmenge_in_l_per_sqm",
             "windrichtung",
-            "windgeschwindigkeit_in_km_per_s",
+            "windgeschwindigkeit_in_km_per_h",
             "luftdruck_in_hpa",
             "relative_feuchte_in_perc",
-            "bewölkungsgrad"
+            "bewölkungsgrad",
+            "report_short_wout_boeen"
         ]
 
         self.assertEqual(expected_keys, list(dset.__getitem__(0).keys()))

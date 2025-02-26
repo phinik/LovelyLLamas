@@ -164,7 +164,7 @@
         "O",
         "O"
     ],
-    "windgeschwindigkeit_in_km_per_s": [
+    "windgeschwindigkeit_in_km_per_h": [
         "7",
         "6",
         "6",
@@ -267,5 +267,6 @@
         "4/8",
         "4/8",
         "4/8"
-    ]
+    ],
+    "report_short_wout_boeen": "In Addis Abeba ist es am Morgen überwiegend dicht bewölkt und die Temperatur liegt bei 14°C. Im Laufe des Mittags kommt es zu Regenschauern und das Thermometer klettert auf 20°C. Abends ist es regnerisch bei Werten von 16 bis zu 17°C. Nachts sind anhaltende Regen-Schauer zu erwarten bei Tiefsttemperaturen von 14°C."
 }
