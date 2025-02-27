@@ -19,6 +19,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+get-pip.py
+data/creativity_preprocessing
 
 # Cython
 *.c
@@ -27,7 +29,8 @@ wheels/
 
 # Data
 data/**/*.json
-data/*.csv
+data/unused_ideas/formatted
+data/unused_ideas/translated_example
 
 # Environment
 .env

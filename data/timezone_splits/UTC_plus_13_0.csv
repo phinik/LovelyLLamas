@@ -1,0 +1,7 @@
+City,URL,Latitude,Longitude,Timezone,Error,Weather Report?
+matatufu,https://wetter.com/samoa/matatufu/WS4035217.html,-14.0436,-171.5838,Pacific/Apia,,True
+vavau,https://wetter.com/samoa/vavau/WS4034896.html,-14.0427,-171.5486,Pacific/Apia,,True
+samatau,https://wetter.com/samoa/samatau/WS4035075.html,-13.8996,-172.0571,Pacific/Apia,,True
+lotofaga,https://wetter.com/samoa/lotofaga/WS4035251.html,-14.0429,-171.5704,Pacific/Apia,,True
+falelima,https://wetter.com/samoa/falelima/WS4035352.html,-13.5957,-172.722,Pacific/Apia,,True
+fagafau,https://wetter.com/samoa/fagafau/WS4035381.html,-13.6403,-172.6702,Pacific/Apia,,True

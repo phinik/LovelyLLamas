@@ -28,8 +28,9 @@ def ensure_directory_exists(directory_path: str) -> None:
 def process_city(city_data: pd.Series, output_dir: str) -> None:
     """Process a single city's weather data."""
     try:
-        city_name = city_data['Stadt']
-        output_file = f"{output_dir}/{city_name}.json"
+        city_name = city_data['City']
+        city_id = str(city_data['URL']).split("/")[-1][:-5]
+        output_file = f"{output_dir}/{city_name}-{city_id}.json"
         
         # Skip if file already exists
         if os.path.exists(output_file):
@@ -40,7 +41,7 @@ def process_city(city_data: pd.Series, output_dir: str) -> None:
         logging.info(f"Starting to process {city_name}", 
                     extra={'worker_id': thread_local.worker_id})
         
-        extractor = WeatherDataExtractor(city_data['URL'])
+        extractor = WeatherDataExtractor(city_data['URL'], False)
         extractor.save_data_to_json(output_file)
         
         logging.info(f"Successfully processed {city_name}", 
@@ -150,4 +151,76 @@ def extract_weather_data(city_list_path: str, num_threads: int = 4) -> None:
             )
 
 if __name__ == "__main__":
-    extract_weather_data("data/cities.csv")
+    import datetime
+    import tzlocal
+    from zoneinfo import ZoneInfo
+    import multiprocessing
+
+    def get_current_utc_offset(timezone_obj) -> float:
+        """
+        Get the current UTC offset for a timezone in hours.
+        Returns offset as float (e.g., 2.0 for UTC+2, -4.5 for UTC-4:30)
+        """
+        try:
+            # Get current offset in seconds
+            offset = timezone_obj.utcoffset(datetime.datetime.now()).total_seconds()
+            # Convert to hours and return as float
+            return offset / 3600.0
+        except Exception as e:
+            print(f"Error getting offset: {e}")
+            return None
+
+    def get_next_timezone_offset(current_time: datetime.datetime, timezone_str: str) -> float:
+        """
+        Given the current time and timezone, determine the UTC offset of the timezone
+        that will reach midnight (00:00) next.
+        The UTC offset is constrained between UTC-10 and UTC+14 and rounded
+        up to the next hour if the difference to midnight is greater than 30 minutes.
+        """
+        try:
+            local_timezone = ZoneInfo(timezone_str)
+
+            # Step 1: Get the current UTC offset for the timezone
+            current_offset = get_current_utc_offset(local_timezone)
+            
+            # Step 2: Calculate midnight of the next day
+            midnight_today = current_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+
+            # Step 3: Calculate the time difference between now and the next midnight
+            time_to_midnight = midnight_today - current_time
+            
+            next_offset = 24 - time_to_midnight.seconds//3600 - 2
+
+            if next_offset == -1:
+                next_offset = 23
+            if next_offset == -2:
+                next_offset = 22
+
+            return next_offset
+
+        except Exception as e:
+            print(f"Error calculating next timezone offset for {timezone_str}: {e}")
+            return None
+
+    # Main execution
+    local_timezone = tzlocal.get_localzone()  # Get local timezone of the server
+    timezone_str = str(local_timezone)       # Convert to string format
+
+    # Get the current time in the local timezone
+    current_time = datetime.datetime.now(local_timezone)
+
+    # Determine the next timezone's offset based on the current time
+    next_offset = get_next_timezone_offset(current_time, timezone_str)
+
+    if next_offset is not None:
+        print(f"The UTC offset of the timezone with the next midnight is: UTC+{next_offset}")
+        file_name = f'{os.getcwd()}/data/timezone_splits/UTC_plus_{str(next_offset).replace(".","_")}_0.csv'
+        print(file_name)
+       
+        # Check if the file exists before proceeding with the extraction
+        if os.path.exists(file_name):
+            print("File exists. Proceeding with the extraction.")
+            extract_weather_data(city_list_path=file_name, num_threads=multiprocessing.cpu_count())
+
+    else:
+        print("Could not determine the next timezone's offset.")

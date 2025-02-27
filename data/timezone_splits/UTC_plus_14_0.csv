@@ -1,0 +1,4 @@
+City,URL,Latitude,Longitude,Timezone,Error,Weather Report?
+tanekore-village,https://wetter.com/kiribati/tanekore-village/KI4030892.html,4.6968,-160.4056,Pacific/Kiritimati,,True
+napari-village,https://wetter.com/kiribati/napari-village/KI4030926.html,3.9081,-159.3883,Pacific/Kiritimati,,True
+london,https://wetter.com/kiribati/london/KI4030939.html,1.9849,-157.475,Pacific/Kiritimati,,True
