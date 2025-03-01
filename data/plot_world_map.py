@@ -3,51 +3,57 @@ import csv
 import json
 import matplotlib.pyplot as plt
 import os
+import re
 
 
 from mpl_toolkits.basemap import Basemap
 from typing import Set, Dict
 
+from data.ifn_colours import *
+
 
 def load_cities(dataset: str) -> Set[str]:
+    split_files = ["dset_train.json", "dset_eval.json", "dset_test.json"]
+    
+    files = []
+    for split_file in split_files:
+        with open(os.path.join(dataset, split_file), "r") as f:
+            files_in_split = json.load(f)
+            files += files_in_split
+            
     cities = []
-
-    dirs = ["train", "eval", "test"]
-    for dir in dirs:
-        dir_path = os.path.join(dataset, dir)
-        
-        files = os.listdir(dir_path)
-        for file in files:
-            with open(os.path.join(dir_path, file), "r") as f:
-                file_content = json.load(f)
+    for file in files:
+        with open(os.path.join(dataset, file), "r") as f:
+            content = json.load(f)
             
-            city = file_content["city"]
+            ident = re.search(r"-([A-Z0-9]{5,})_standardised", file)[0].lstrip("-").rstrip("_standardised")
+            cities.append((file, ident))
             
-            cities.append((file, city))
-
     return set(cities)
 
 
 def load_city_data() -> Dict:
     data = {}
-    with open("./data//misc/crawled_information/city_data.csv", "r") as f:
+    with open("./data/misc/crawled_information/city_data.csv", "r") as f:
         reader = csv.DictReader(f)
         
         for item in reader:
-            data[item["True Name"].strip()] = item
+            ident = item["URL"].split("/")[-1].rstrip(".htlm")
+            data[ident] = item
 
     return data
 
 
 def filter_city_data_based_on_cities(cities: Set, city_data: Dict) -> Dict:
     data = {}
-    for file, city in cities:
+    for _, city in cities:
         data[city] = {
             "lat": float(city_data[city]["Latitude"].strip()),
             "lon": float(city_data[city]["Longitude"].strip())
             }
     
     return data
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -56,14 +62,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cities = load_cities(args.dataset)
+
+    print(len(cities))
+
     city_data = load_city_data()
 
     city_lat_lon = filter_city_data_based_on_cities(cities, city_data)
 
+    print(len(city_lat_lon))
+
+
     m = Basemap(projection='kav7',lon_0=0,resolution='c')
     m.drawcoastlines()
-    m.fillcontinents(color='#C0C0C0',lake_color='#A4DCEE')
-    m.drawmapboundary(fill_color='#A4DCEE') 
+    m.fillcontinents(color=ColourGetter.get_as_rgb("black", 40), lake_color=ColourGetter.get_as_rgb("light_blue", 60))
+    m.drawmapboundary(fill_color=ColourGetter.get_as_rgb("light_blue", 60)) 
 
     lons = []
     lats = []
@@ -72,5 +84,10 @@ if __name__ == "__main__":
         lons.append(coords["lon"])
 
     x, y = m(lons,lats)
-    m.scatter(x,y,3,marker='o',color='#B00046')
+    m.scatter(x, y, 3, marker='o', color=ColourGetter.get_as_rgb("red", 100))
+
+    fig = plt.gcf()
+    fig.set_size_inches(16/2.54, 10/2.54)
+    plt.tight_layout()
+    plt.savefig("data/world_map.pdf")
     plt.show()
