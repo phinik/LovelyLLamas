@@ -90,7 +90,7 @@ def number_of_sentences(data: List[Dict], key: str) -> List[int]:
 
 def nans_in_context(data: List[Dict]) -> float:
     keys = [
-        "times", "clearness", "temperatur_in_deg_C", "niederschlagsrisiko_in_perc", 
+        "clearness", "temperatur_in_deg_C", "niederschlagsrisiko_in_perc", 
         "niederschlagsmenge_in_l_per_sqm", "windrichtung", "windgeschwindigkeit_in_km_per_h", "bewölkungsgrad"
     ]
     
