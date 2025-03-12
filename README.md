@@ -3,6 +3,9 @@ We are using [Poetry](https://python-poetry.org/) for dependency management. Hen
 1. Install Poetry if you have not already. Click [HERE](https://python-poetry.org/docs/#installing-with-the-official-installer) if you need a tutorial.
 2. Clone our repository, cd into it and run `poetry install` in the root directory of our repository.
 
+# Installing a dataset
+Our two datasets are shipped with the repo, though as zip files in order to speed up the download. The zip files are contained in the `datasets` directory. To use any of the two, simply unzip the zip file to a location of your choice. `dataset_2024_12_12_wettercom.zip` contains the data collected from wetter.com, whereas `dataset_2024_12_12_chatGPT` containes the weather reports that were rewritten with the help of chatGPT.
+
 # How to run our models
 Before running any of our models, make sure you have activated the poetry virtual environment. For this, cd into our repositiory and simply type `poetry shell`. Now you are good to go.
 
@@ -21,10 +24,12 @@ Transformers are trained using `src/train_transformer.py`. The following paramet
 11. overview: What context to use, choices are "full", "ctpc", "ctc", "ct" and "tpwc"
 12. num_samples: How many samples to use during training, choices are -1 (all), 100, 200, 400, 800, 1600, 3200, 6400
 
+Other parameters, such as the number of epochs, must be changed within the file itself, i. e. at the bottom of the file.
+
 
 For example, a command to train a default, non-RoPE transformer of Medium size (d_model=64) on the wetter.com dataset using the Bert tokenizer, a CT context and 6400 samples could look like:
 
-`python src/train_transformer.py --dataset_path ~/dataset_2024_12_12_gpt --checkpoints_path ./checkpoints --model og_transformer --cache_data --tensorboard_path ./tensorboard --tokenizer bert --target default --name final_dmodel_64_2024_12_12_bert_ct_6400 --overview ct --model_config src/transformer_configs/dmodel_64_tiny.json --num_samples 6400`
+    python src/train_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --checkpoints_path ./checkpoints --model og_transformer --cache_data --tensorboard_path ./tensorboard --tokenizer bert --target default --name final_dmodel_64_2024_12_12_bert_ct_6400 --overview ct --model_config src/transformer_configs/dmodel_64_tiny.json --num_samples 6400
 
 Do not get confused with the naming of the model config files. The suffixes "tiny", "small" and "big" originate from the intermediate presentation, and were kept for backwards compatability with the models from that time. They are **not** the same as the names used in the final report. The final report uses the following naming convention:
 - tiny: dmodel_16_tiny.json
@@ -34,6 +39,11 @@ Do not get confused with the naming of the model config files. The suffixes "tin
 - huge: dmodel_256_big.json
 
 By default, the model is saved after each epoch and the best model is saved in a separate file, called `best_model_CE_loss`, in the checkpoints path. Some metadata is saved there too. You should not mess around with these files as they are needed to automatically configure the evaluation and text generation.
+
+
+The custom classifiers are trained in a similar fashion using `src/train_classifier.py`. Note, however, that the arguments are slighly different. Run
+`src/train_classifier.py -h` in order to get an overview over the arguments. The `-h` argument works for any training, evaluation or generation file.
+
 
 ## Evaluate a model
 Transformers are evaulated using `src/eval_metrics_transformer.py`. The following parameters are available:
@@ -45,9 +55,18 @@ Transformers are evaulated using `src/eval_metrics_transformer.py`. The followin
 
 For example, in order to evalue the best model of the above training, we could run:
 
-`python src/eval_metrics_transformer.py --dataset_path ~/dataset_2024_12_12_gpt --metrics temps temp_range cities classifier classifier_ct --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth`
+    python src/eval_metrics_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --metrics temps temp_range cities classifier classifier_ct --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
 
 This would generate a file `eval_best_model_CE_loss.json` in `checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400` containing the values for the selected metrics.
 
 ## Generate from a model
+To generate from a transformer, use `src/generate_transformer.py`. The following parameters are available:
+1. dataset_path: Path to dataset root
+2. model_weights: Which model weights to use
+
+Again, we could generate from our newly trained transformer using:
+
+    python src/generate_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
+
+By default, this will generate weather reports for 10 samples from the test dataset and print them to the terminal along the respective target.
 
