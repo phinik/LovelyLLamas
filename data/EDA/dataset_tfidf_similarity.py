@@ -1,3 +1,7 @@
+"""
+This file was used to compute the Top 50 cosine similarity for the datasets using TF-IDF vectors.
+"""
+
 import argparse
 import json
 import matplotlib.pyplot as plt
