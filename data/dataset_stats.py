@@ -83,7 +83,7 @@ def number_of_sentences(data: List[Dict], key: str) -> List[int]:
     for point in data:
         report = point[key]
 
-        n_sentences.append(report.count("."))
+        n_sentences.append(len(re.findall(r"[A-Za-z0-9]+[.!?]{1,1}", report)))
 
     return n_sentences   
 
