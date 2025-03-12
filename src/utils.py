@@ -22,7 +22,7 @@ class TargetSelector:
         assert target_type in ["gpt", "default"], f"Unknown overview type {target_type}"
 
         if target_type == "gpt":
-            return "gpt_rewritten_cleaned"
+            return "gpt_rewritten_apo"
         elif target_type == "default":
             return "report_short_wout_boeen"
         else:
