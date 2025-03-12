@@ -1,4 +1,5 @@
 import argparse
+import json
 import tqdm
 import torch
 import torch.nn.functional as F
@@ -10,7 +11,7 @@ from src.dataloader import *
 from src.models import TransformerFactory
 from src.tokenizer import ContextTokenizer, TokenizerFactory
 from src import utils
-#import src.determinism
+import src.determinism
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -88,7 +89,7 @@ class Generator:
             for j in range(0, 192, 8):
                 print(f"Overview: {batch[self._overview_str][0].split(';')[j:j+8]}")
             print(120*'#')
-            if i == 0:
+            if i == 5:
                 exit()
 
     @torch.no_grad()
@@ -96,7 +97,7 @@ class Generator:
         model.eval()
 
         batch = get_demo_weather_dataset(self._config["dataset"])[id]
-        context = batch["overview"]
+        context = batch[self._overview_str]
 
         # Tokenize
         context = torch.tensor(self._context_tokenizer.stoi(context)).unsqueeze(0)
@@ -139,33 +140,26 @@ class Generator:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", type=str, help="Name of the run")
     parser.add_argument("--dataset_path", type=str, help="Path to dataset root")
     parser.add_argument("--model_weights", type=str, help="Which model weights to use")
-    parser.add_argument("--tokenizer", type=str, choices=["sow", "bert"], default="sow", help="Which tokenizer to use for the report")
-    parser.add_argument("--cache_data", action="store_true", help="All data will be loaded into the RAM before training")
     parser.add_argument("--target", type=str, choices=["default", "gpt"], required=True, help="What to train on")
 
 
     args = parser.parse_args()
        
-    config = {
-        "name": args.name,
-        "dataset": args.dataset_path,
-        "model_weights": args.model_weights,
-        "model_params": os.path.join(os.path.dirname(args.model_weights), "params.json"),
-        "cached": args.cache_data,
-        "model": "transformer", #args.model,
-        "block_size": 20,
-        "tokenizer": args.tokenizer,
-        "target": args.target
-    }
+    with open(os.path.join(os.path.split(args.model_weights)[0], "config.json"), "r") as f:
+        config = json.load(f)
+
+    config["dataset"] = args.dataset_path
+    config["model_weights"] = args.model_weights
+    config["model_params"] = os.path.join(os.path.dirname(args.model_weights), "params.json")
+    config["target"] = args.target
 
     model = TransformerFactory.from_file(config["model_params"])
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)
 
     generator = Generator(config)
-    #generator.sample(model=model)
+    generator.sample(model=model)
 
-    print(generator.get(model, 1))
+    #print(generator.get(model, 4))
