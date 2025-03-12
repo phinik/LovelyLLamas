@@ -164,7 +164,7 @@
         "N",
         "NW"
     ],
-    "windgeschwindigkeit_in_km_per_s": [
+    "windgeschwindigkeit_in_km_per_h": [
         "11",
         "11",
         "11",
@@ -267,5 +267,6 @@
         "3/8",
         "3/8",
         "4/8"
-    ]
+    ],
+    "report_short_wout_boeen": null
 }
