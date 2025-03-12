@@ -2,6 +2,7 @@ import argparse
 import tqdm
 import os
 import json
+import re
 
 from typing import Set
 
@@ -13,19 +14,15 @@ from src.tokenizer import BertTokenizerAdapter
 def process(dataloader) -> Set:
     tokens_target_total = set()
 
-    tokenizer = BertTokenizerAdapter()
-
     for item in tqdm.tqdm(dataloader):
         target = item["report_short_wout_boeen"][0]
         
-        token_seq = tokenizer.stoi(target)
-        
-        tokens_target_total = tokens_target_total.union(token_seq)
-        
-    numbers = " ".join([str(i) for i in range(-60, 61)])
-    numbers = tokenizer.stoi(numbers)
-    tokens_target_total = tokens_target_total.union(numbers)
+        target = re.sub(r"[.,!:?();]", "", target)
 
+        token_set = set(target.split())
+        
+        tokens_target_total = tokens_target_total.union(token_set)
+        
     return tokens_target_total
 
 
@@ -66,6 +63,6 @@ if __name__ == "__main__":
 
     print(len(tokens_target_total))
 
-    with open(os.path.join(args.output_directory, "rgpt_tokens_bert.json"), "wb") as f:
+    with open(os.path.join(args.output_directory, "test_target_tokens.json"), "wb") as f:
         tokens_jsonized = json.dumps(sorted(list(tokens_target_total)), ensure_ascii=False, indent=4).encode("utf-8")
         f.write(tokens_jsonized)
