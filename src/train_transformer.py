@@ -15,7 +15,7 @@ from src.dataloader import *
 from src.loss import CELoss
 from src.models import TransformerFactory
 from src.tokenizer import TokenizerFactory, ContextTokenizer
-from src.eval import Evaluator
+from src.eval_transformer import Evaluator
 from src import utils
 import src.determinism
 
