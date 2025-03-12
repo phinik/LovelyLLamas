@@ -37,7 +37,10 @@ class TokenizeUnits:
         }
 
     def __call__(self, data: Dict) -> Dict:
-        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned"]:
+        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned", "gpt_rewritten_apo"]:
+            if not key in data.keys():
+                continue
+
             for unit, token in self.unit_map.items():
                 data[key] = data[key].replace(unit, token)
 
@@ -49,7 +52,10 @@ class ReplaceCityName:
         pass
 
     def __call__(self, data: Dict) -> Dict:
-        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned"]:
+        for key in ['report_short_wout_boeen', "gpt_rewritten_cleaned", "gpt_rewritten_apo"]:
+            if not key in data.keys():
+                continue
+            
             data[key] = data[key].replace(data['city'], '<city>')
         return data
 
@@ -67,12 +73,16 @@ class ReduceKeys:
             "overview_ct",
             "overview_tpwc", 
             "report_short_wout_boeen", 
-            "gpt_rewritten_cleaned", 
+            "gpt_rewritten_cleaned",
+            "gpt_rewritten_apo",
             "temperatur_in_deg_C"
         ]
 
         reduced_dict = {}
         for key in reduced_set_of_keys:
+            if not key in data.keys():
+                continue
+            
             reduced_dict[key] = data[key]
 
         return reduced_dict
