@@ -106,6 +106,7 @@ class TestReduceKeys(unittest.TestCase):
             "overview_tpwc": "", 
             "report_short_wout_boeen": "",
             "gpt_rewritten_cleaned": "",
+            "gpt_rewritten_apo": "",
             "temperatur_in_deg_C": "",
             "key_to_remove": ""
         }
@@ -116,7 +117,7 @@ class TestReduceKeys(unittest.TestCase):
 
         self.assertEqual(
             ["city", "overview_full", "overview_ctpc", "overview_ctc", "overview_ct", "overview_tpwc",
-             "report_short_wout_boeen", "gpt_rewritten_cleaned", "temperatur_in_deg_C"],
+             "report_short_wout_boeen", "gpt_rewritten_cleaned", "gpt_rewritten_apo", "temperatur_in_deg_C"],
             list(transformed_test_dict.keys())
         )
 
