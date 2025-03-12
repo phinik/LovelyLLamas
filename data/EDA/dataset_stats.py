@@ -1,3 +1,7 @@
+"""
+This file was used to compute the dataset statistics.
+"""
+
 import argparse
 import json
 import matplotlib.pyplot as plt
