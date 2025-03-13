@@ -16,7 +16,7 @@ def process(dataloader) -> Set:
     tokenizer = BertTokenizerAdapter()
 
     for item in tqdm.tqdm(dataloader):
-        target = item["gpt_rewritten_cleaned"][0]
+        target = item["report_short_wout_boeen"][0]
         
         token_seq = tokenizer.stoi(target)
         

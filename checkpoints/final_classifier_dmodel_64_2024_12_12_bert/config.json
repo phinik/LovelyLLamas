@@ -1,0 +1,17 @@
+{
+    "batch_size": 10,
+    "block_size": 20,
+    "cached": true,
+    "checkpoints": "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert",
+    "dataset": "/homes/21donn/dataset_2024_12_12_gpt",
+    "epochs": 100,
+    "model": "transformer_classifier",
+    "model_config": "src/transformer_configs/dmodel_64_tiny.json",
+    "name": "final_classifier_dmodel_64_2024_12_12_bert",
+    "num_samples": -1,
+    "num_workers": 4,
+    "overview": "full",
+    "target": "default",
+    "tensorboard": "./tensorboard/final_classifier_dmodel_64_2024_12_12_bert",
+    "tokenizer": "bert"
+}

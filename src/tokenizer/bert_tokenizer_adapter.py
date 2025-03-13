@@ -4,7 +4,6 @@ import os
 
 from transformers import BertTokenizer
 from typing import List
-from abc import abstractmethod
 
 
 from .itokenizer import ITokenizer
@@ -132,5 +131,5 @@ class SubsetBertTokenizerRepShort(SubsetBertTokenizer):
 class SubsetBertTokenizerGPT(SubsetBertTokenizer):
     def __init__(self, dataset_path: str):
         super().__init__(
-            token_file=os.path.join(dataset_path, "gpt_tokens_bert.json")
+            token_file=os.path.join(dataset_path, "rgpt_tokens_bert.json")
         )

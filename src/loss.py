@@ -9,3 +9,13 @@ class CELoss(nn.Module):
 
     def forward(self, prediction, target):
         return self._loss(prediction, target)
+    
+
+class BCELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self._loss = nn.BCELoss(reduction="sum")
+
+    def forward(self, prediction, target):
+        return self._loss(prediction, target)
