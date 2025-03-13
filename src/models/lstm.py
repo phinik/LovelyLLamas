@@ -170,7 +170,7 @@ class LSTM(nn.Module):
 
     def load_weights_from(self, path: str):
         """ Load the model weights from a file. """
-        self.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(path, weights_only=True))
 
     def save_params_to(self, path: str):
         """ Save the model parameters to a JSON file. """

@@ -9,8 +9,8 @@ from src.models.lstm import LSTM
 from src.dataloader import get_eval_dataloader_weather_dataset
 from src.tokenizer import TokenizerFactory, ContextTokenizer
 from src.loss import CELoss
-
 from src import utils
+import json
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -25,8 +25,7 @@ class Evaluator:
             path=self._config["dataset"], 
             batch_size=self._config["batch_size"],
             num_workers=self._config["num_workers"],
-            cached=self._config["cached"],
-            overview=self._config["overview"]
+            cached=self._config["cached"]
         )
 
         # Tokenizer
@@ -36,6 +35,12 @@ class Evaluator:
         # Loss
         self._loss = CELoss(ignore_idx=self._target_tokenizer.padding_idx)
 
+        self._target_str = utils.TargetSelector.select(self._config["target"])
+        self._overview_str = utils.OverviewSelector.select(self._config["overview"])
+
+        print(f" [TARGET] {self._target_str.upper()}")
+        print(f" [OVERVIEW] {self._overview_str.upper()}")
+
     @torch.no_grad()
     def evaluate(self, model) -> Dict:
         model.eval()
@@ -44,8 +49,8 @@ class Evaluator:
         total_loss_values = 0
 
         for i, batch in enumerate(tqdm.tqdm(self._eval_dataloader)):
-            context = batch["overview"]
-            targets = batch["gpt_rewritten_cleaned"] if self._config["target"] == "gpt" else batch["report_short_wout_boeen"]
+            context = batch[self._overview_str]
+            targets = batch[self._target_str]
 
             # Tokenize
             for j in range(len(context)):
@@ -109,7 +114,10 @@ if __name__ == "__main__":
         "overview": args.overview
     }
 
-    c = {k: v for k, v in c.items() if k in LSTM.__init__.__code__.co_varnames}
+    with open(config["model_params"], "r") as f:
+        params = json.load(f)
+
+    c = {k: v for k, v in params.items() if k in LSTM.__init__.__code__.co_varnames}
     model = LSTM(**c)
     model.load_weights_from(config["model_weights"])
     model.to(DEVICE)

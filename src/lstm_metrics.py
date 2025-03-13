@@ -7,7 +7,7 @@ from typing import List, Dict
 
 from evaluate import load
 
-from src.models import TransformerFactory
+from src.models.lstm import LSTM
 from src.tokenizer import ContextTokenizer
 from src.data_postprocessing import RemovePunctutation
 
@@ -321,7 +321,8 @@ class CustomClassifier(IMetric):
         model_weights = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert/best_model_CE_loss.pth"
         self._block_size = 20
 
-        self._model = TransformerFactory.from_file(model_params)
+        c = {k: v for k, v in c.items() if k in LSTM.__init__.__code__.co_varnames}
+        self._model = LSTM(**c)
         self._model.load_weights_from(model_weights)
         self._model.to(DEVICE)
 
@@ -386,7 +387,8 @@ class CustomClassifierCT(IMetric):
         model_weights = "./checkpoints/final_classifier_dmodel_64_2024_12_12_bert_ct/best_model_CE_loss.pth"
         self._block_size = 20
 
-        self._model = TransformerFactory.from_file(model_params)
+        c = {k: v for k, v in c.items() if k in LSTM.__init__.__code__.co_varnames}
+        self._model = LSTM(**c)
         self._model.load_weights_from(model_weights)
         self._model.to(DEVICE)
 
