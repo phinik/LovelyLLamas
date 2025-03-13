@@ -15,7 +15,7 @@ from src.dataloader import *
 from src.loss import CELoss
 from src.models.lstm import LSTM
 from src.tokenizer import TokenizerFactory, ContextTokenizer
-from src.lstm_eval import Evaluator
+from src.eval_lstm import Evaluator
 from src import utils
 import src.determinism
 
