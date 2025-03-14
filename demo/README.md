@@ -2,14 +2,13 @@
 Backend:
 [The files neeeded for the backend will either already be there or linked otherwise]
 1. Create backend/assets/ folder which will contains cities.json and dset_test.json
-2. Create backend/data which will contain the dataset with all JSON files for the cities
-3. Backend/data also contains following JSON files:
-    - bags_of_words_gpt
-    - bags_of_words
+2. Create backend/data which will contain the dataset with all JSON files for the cities. Simply extract one of the dataset zip files to this location.
+3. Backend/data must contain the following JSON files:
     - context_tokens
     - dset_test
     - rep_short_tokens_bert
     - target_tokens
+   as well as the data folder from the dataset.
 4. Create backend/src_model/ folder which will contain the model files:
     - best_model_CE_loss.pth
     - best_model_CE_loss_lstm.pth
