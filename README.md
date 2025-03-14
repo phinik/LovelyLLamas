@@ -8,8 +8,6 @@ Our repository is structured as follows:
 - src => our DL pipeline as it was used to train the transformers and the LSTMs
 - tests => some tests for the DL pipeline using the unittest library
 
-
-
 # How to install our repository
 We are using [Poetry](https://python-poetry.org/) for dependency management. Hence, to get our code running, you need to perform the following steps:
 1. Install Poetry if you have not already. Click [HERE](https://python-poetry.org/docs/#installing-with-the-official-installer) if you need a tutorial.
@@ -17,6 +15,12 @@ We are using [Poetry](https://python-poetry.org/) for dependency management. Hen
 
 # Installing a dataset
 Our two datasets are shipped with the repo, though as zip files in order to speed up the download. The zip files are contained in the `datasets` directory. To use any of the two, simply unzip the zip file to a location of your choice. `dataset_2024_12_12_wettercom.zip` contains the data collected from wetter.com, whereas `dataset_2024_12_12_chatGPT` containes the weather reports that were rewritten with the help of chatGPT.
+
+# Models included in the repository
+We provide you with some of our models so that you can test them without having to train a new model:
+- final_dmodel_64_2024_12_12_bert_ctc: Medium CTC Transformer using the Bert tokenizer. To be used with the `_transformer.py` files in `src`
+-
+
 
 # How to run our models
 Before running any of our models, make sure you have activated the poetry virtual environment. For this, cd into our repositiory and simply type `poetry shell`. Now you are good to go.
