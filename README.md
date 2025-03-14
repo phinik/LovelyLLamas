@@ -2,7 +2,7 @@
 Our repository is structured as follows:
 
 - checkpoints => **Don't touch**. Contains the two custom classifier models that are needed for evaluating the respective metrics.
-- data => everything related to the creation of the datasets, from data scraping, over EDA, post processing, chatGPT rewriting to dataset creation
+- data => everything related to the creation of the datasets, from data scraping, over EDA, post-processing, ChatGPT rewriting to dataset creation
 - datasets => the two datasets as zip files
 - demo => the demo web app as a docker compose
 - src => our DL pipeline as it was used to train the transformers and the LSTMs
@@ -14,7 +14,7 @@ We are using [Poetry](https://python-poetry.org/) for dependency management. Hen
 2. Clone our repository, cd into it and run `poetry install` in the root directory of our repository.
 
 # Installing a dataset
-Our two datasets are shipped with the repo, though as zip files in order to speed up the download. The zip files are contained in the `datasets` directory. To use any of the two, simply unzip the zip file to a location of your choice. `dataset_2024_12_12_wettercom.zip` contains the data collected from wetter.com, whereas `dataset_2024_12_12_chatGPT` containes the weather reports that were rewritten with the help of chatGPT.
+Our two datasets are shipped with the repo, though as zip files in order to speed up the download. The zip files are contained in the `datasets` directory. To use any of the two, simply unzip the zip file to a location of your choice. `dataset_2024_12_12_wettercom.zip` contains the data collected from wetter.com, whereas `dataset_2024_12_12_chatGPT` contains the weather reports that were rewritten with the help of ChatGPT.
 
 # Models included in the repository
 We provide you with some of our models so that you can test them without having to train a new model:
@@ -23,7 +23,7 @@ We provide you with some of our models so that you can test them without having 
 
 
 # How to run our models
-Before running any of our models, make sure you have activated the poetry virtual environment. For this, cd into our repositiory and simply type `poetry shell`. Now you are good to go.
+Before running any of our models, make sure you have activated the poetry virtual environment. For this, cd into our repository and simply type `poetry shell`. Now you are good to go.
 
 ## Train a model
 Transformers are trained using `src/train_transformer.py`. The following parameters are available:
@@ -34,9 +34,9 @@ Transformers are trained using `src/train_transformer.py`. The following paramet
 5. model: Which model to use, choices are "og_transformer" (default transformer), "rope_transformer", "full_rope_transformer"
 6. cache_data: All data will be loaded into the RAM before training
 7. tokenizer: Which tokenizer to use for the weather report, choices are "sow" and "bert"
-8. model_config: What transformer model configuration to use. This referes to the files in `src/transformer_configs`.
-9. num_workers: How many workers to use for dataloading
-10. target: What to train on", choices are "default" (wetter.com) and "gpt". Note that the respective dataset must be used!
+8. model_config: What transformer model configuration to use. This refers to the files in `src/transformer_configs`.
+9. num_workers: How many workers to use for data loading
+10. target: What to train on, choices are "default" (wetter.com) and "gpt". Note that the respective dataset must be used!
 11. overview: What context to use, choices are "full", "ctpc", "ctc", "ct" and "tpwc"
 12. num_samples: How many samples to use during training, choices are -1 (all), 100, 200, 400, 800, 1600, 3200, 6400
 
@@ -47,7 +47,7 @@ For example, a command to train a default, non-RoPE transformer of Medium size (
 
     python src/train_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --checkpoints_path ./checkpoints --model og_transformer --cache_data --tensorboard_path ./tensorboard --tokenizer bert --target default --name final_dmodel_64_2024_12_12_bert_ct_6400 --overview ct --model_config src/transformer_configs/dmodel_64_tiny.json --num_samples 6400
 
-Do not get confused with the naming of the model config files. The suffixes "tiny", "small" and "big" originate from the intermediate presentation, and were kept for backwards compatability with the models from that time. They are **not** the same as the names used in the final report. The final report uses the following naming convention:
+Do not get confused with the naming of the model config files. The suffixes "tiny", "small" and "big" originate from the intermediate presentation, and were kept for backwards compatibility with the models from that time. They are **not** the same as the names used in the final report. The final report uses the following naming convention:
 - tiny: dmodel_16_tiny.json
 - small: dmodel_32.json
 - medium: dmodel_64_tiny.json
@@ -62,14 +62,14 @@ The custom classifiers are trained in a similar fashion using `src/train_classif
 
 
 ## Evaluate a model
-Transformers are evaulated using `src/eval_metrics_transformer.py`. The following parameters are available:
+Transformers are evaluated using `src/eval_metrics_transformer.py`. The following parameters are available:
 1. dataset_path: Path to dataset root. This should be equal to the path used for the training of the model.
 2. model_weights: Which model weights to use
 3. metrics: Select which metrics shall be computed, choices are "bertscore", "bleu", "rouge", "temps" (Temp_Ghost), "temp_range", "cities", "classifier" and "classifier_ct". Note: 'classifier' and 'classifier_ct' do not work with SoW models!
 4. output_filename: If output shall be saved to a different file than the standard file. By default, the results are saved to `eval_<model_weights>.json` in the respective checkpoints directory.
 
 
-For example, in order to evalue the best model of the above training, we could run:
+For example, in order to evaluate the best model of the above training, we could run:
 
     python src/eval_metrics_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --metrics temps temp_range cities classifier classifier_ct --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
 
