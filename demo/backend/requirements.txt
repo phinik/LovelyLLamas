@@ -1,0 +1,9 @@
+flask==3.0.0
+flask-cors==4.0.0
+werkzeug==3.0.1
+torch
+tqdm
+numpy
+torchtune
+transformers
+torchao
