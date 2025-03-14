@@ -40,9 +40,6 @@ data/unused_ideas/translated_example
 batches/
 demo/backend/data/
 
-# Models
-gru/models/
-
 # Environment
 .env
 .venv
@@ -59,3 +56,4 @@ htmlcov/
 *.model
 *.vocab
 *.pth
+*.pt
