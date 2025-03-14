@@ -1,0 +1,30 @@
+{
+    "BertScore": {
+        "mean_f1": 0.8593993926774864,
+        "mean_precision": 0.8592907930762808,
+        "mean_recall": 0.8598986645960365
+    },
+    "BLEU": {
+        "mean_bleu": 0.38936836673585573
+    },
+    "ROUGE": {
+        "mean_rouge_1": 0.5990615720947229,
+        "mean_rouge_2": 0.3709051992166355,
+        "mean_rouge_L": 0.5309557689609269
+    },
+    "TemperatureCorrectness": {
+        "accuracy": 0.9982028241335045
+    },
+    "TemperatureRange": {
+        "mean_score": 0.9989043697779493
+    },
+    "CityAppearance": {
+        "accuracy": 1.0
+    },
+    "CustomClassifierFull": {
+        "mean_score": 0.9452295701841108
+    },
+    "CustomClassifierCT": {
+        "mean_score": 0.963582573639429
+    }
+}
