@@ -4,6 +4,7 @@ Our repository is structured as follows:
 - checkpoints => **Don't touch**. Contains the two custom classifier models that are needed for evaluating the respective metrics.
 - data => everything related to the creation of the datasets, from data scraping, over EDA, post processing, chatGPT rewriting to dataset creation
 - datasets => the two datasets as zip files
+- demo => the demo web app as a docker compose
 - src => our DL pipeline as it was used to train the transformers and the LSTMs
 - tests => some tests for the DL pipeline using the unittest library
 
