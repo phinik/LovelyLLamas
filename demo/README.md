@@ -8,6 +8,7 @@ Backend:
     - dset_test
     - rep_short_tokens_bert
     - target_tokens
+   
    as well as the data folder from the dataset.
 4. Create backend/src_model/ folder which will contain the model files:
     - best_model_CE_loss.pth
