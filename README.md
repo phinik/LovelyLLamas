@@ -18,7 +18,7 @@ Our two datasets are shipped with the repo, though as zip files in order to spee
 
 # Models included in the repository
 We provide you with some of our models so that you can test them without having to train a new model:
-- final_dmodel_64_2024_12_12_bert_ctc: Medium CTC Transformer using the Bert tokenizer. To be used with the `_transformer.py` files in `src`
+- final_dmodel_64_2024_12_12_bert_ctc: Medium CTC Transformer using the Bert tokenizer. To be used with the `src/*_transformer.py` files.
 -
 
 
