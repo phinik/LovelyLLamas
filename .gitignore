@@ -53,3 +53,6 @@ ENV/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Models
+*.pt
