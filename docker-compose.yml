@@ -6,7 +6,7 @@ services:
       context: ./demo/frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "80:80"
     networks:
       - app-network
     depends_on:

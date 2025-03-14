@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Search, Loader2, MapPin } from 'lucide-react'
+import { Search, Loader2, MapPin, ChevronDown } from 'lucide-react'
 
 function App() {
   const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [response, setResponse] = useState('')
   const [loading, setLoading] = useState(false)
+  const [modelType, setModelType] = useState('transformer') // Default model type
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -34,7 +35,10 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ city }),
+        body: JSON.stringify({ 
+          city,
+          modelType // Include the model type in the API call
+        }),
       })
       const data = await result.json()
       setResponse(data.response)
@@ -56,17 +60,33 @@ function App() {
 
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
           <div className="relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                className="w-full pl-10 pr-4 py-3 text-gray-900 border-2 border-gray-200 rounded-xl 
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors
-                          placeholder:text-gray-400"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Enter a city name..."
-              />
+            <div className="flex space-x-2">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-3 text-gray-900 border-2 border-gray-200 rounded-xl 
+                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors
+                            placeholder:text-gray-400"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Enter a city name..."
+                />
+              </div>
+              
+              {/* Model type dropdown */}
+              <div className="relative min-w-[150px]">
+                <select
+                  value={modelType}
+                  onChange={(e) => setModelType(e.target.value)}
+                  className="w-full appearance-none pl-4 pr-10 py-3 text-gray-900 border-2 border-gray-200 rounded-xl
+                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="transformer">Transformer</option>
+                  <option value="lstm">LSTM</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-3 text-gray-400 w-5 h-5 pointer-events-none" />
+              </div>
             </div>
 
             {suggestions.length > 0 && (
@@ -101,7 +121,9 @@ function App() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">City Insights</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      City Insights <span className="text-sm font-normal text-gray-500">({modelType})</span>
+                    </h3>
                     <p className="text-gray-700 leading-relaxed">{response}</p>
                   </div>
                 </div>
