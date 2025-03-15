@@ -126,7 +126,7 @@ class RoPETransformer(nn.Module):
         torch.save(self.state_dict(), os.path.join(dir, f"{filename}.pth"))
 
     def load_weights_from(self, path: str):
-        self.load_state_dict(torch.load(path, weights_only=True))
+        self.load_state_dict(torch.load(path, weights_only=True, map_location=torch.device("cpu")))
 
     def save_params_to(self, dir: str):
         with open(os.path.join(dir, "params.json"), "w") as f:
