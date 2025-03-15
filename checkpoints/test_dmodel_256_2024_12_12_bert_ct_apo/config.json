@@ -1,0 +1,17 @@
+{
+    "batch_size": 10,
+    "block_size": 20,
+    "cached": true,
+    "checkpoints": "./checkpoints/test_dmodel_256_2024_12_12_bert_ct_apo",
+    "dataset": "/homes/21donn/dataset_2024_12_12_apo",
+    "epochs": 100,
+    "model": "og_transformer",
+    "model_config": "src/transformer_configs/dmodel_256_big.json",
+    "name": "test_dmodel_256_2024_12_12_bert_ct_apo",
+    "num_samples": -1,
+    "num_workers": 4,
+    "overview": "ct",
+    "target": "gpt",
+    "tensorboard": "./tensorboard/test_dmodel_256_2024_12_12_bert_ct_apo",
+    "tokenizer": "bert"
+}

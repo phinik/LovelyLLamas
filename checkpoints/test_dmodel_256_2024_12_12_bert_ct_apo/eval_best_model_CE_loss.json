@@ -1,0 +1,11 @@
+{
+    "TemperatureCorrectness": {
+        "accuracy": 0.9899189563154773
+    },
+    "TemperatureRange": {
+        "mean_score": 0.9567071752523342
+    },
+    "CityAppearance": {
+        "accuracy": 0.9992252066115702
+    }
+}
