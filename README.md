@@ -45,7 +45,7 @@ Other parameters, such as the number of epochs, must be changed within the file 
 
 For example, a command to train a default, non-RoPE transformer of Medium size (d_model=64) on the wetter.com dataset using the Bert tokenizer, a CT context and 6400 samples could look like:
 
-    python src/train_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --checkpoints_path ./checkpoints --model og_transformer --cache_data --tensorboard_path ./tensorboard --tokenizer bert --target default --name final_dmodel_64_2024_12_12_bert_ct_6400 --overview ct --model_config src/transformer_configs/dmodel_64_tiny.json --num_samples 6400
+    python src/train_transformer.py --dataset_path ./datasets/dataset_2024_12_12_wettercom --checkpoints_path ./checkpoints --model og_transformer --cache_data --tensorboard_path ./tensorboard --tokenizer bert --target default --name final_dmodel_64_2024_12_12_bert_ct_6400 --overview ct --model_config src/transformer_configs/dmodel_64_tiny.json --num_samples 6400
 
 Do not get confused with the naming of the model config files. The suffixes "tiny", "small" and "big" originate from the intermediate presentation, and were kept for backwards compatibility with the models from that time. They are **not** the same as the names used in the final report. The final report uses the following naming convention:
 - tiny: dmodel_16_tiny.json
@@ -71,7 +71,7 @@ Transformers are evaluated using `src/eval_metrics_transformer.py`. The followin
 
 For example, in order to evaluate the best model of the above training, we could run:
 
-    python src/eval_metrics_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --metrics temps temp_range cities classifier classifier_ct --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
+    python src/eval_metrics_transformer.py --dataset_path ./datasets/dataset_2024_12_12_wettercom --metrics temps temp_range cities classifier classifier_ct --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
 
 This would generate a file `eval_best_model_CE_loss.json` in `checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400` containing the values for the selected metrics.
 
@@ -82,7 +82,7 @@ To generate from a transformer, use `src/generate_transformer.py`. The following
 
 Again, we could generate from our newly trained transformer using:
 
-    python src/generate_transformer.py --dataset_path ~/dataset_2024_12_12_wettercom --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
+    python src/generate_transformer.py --dataset_path ./datasets/dataset_2024_12_12_wettercom --model_weights checkpoints/final_dmodel_64_2024_12_12_bert_ct_6400/best_model_CE_loss.pth
 
 By default, this will generate weather reports for 10 samples from the test dataset and print them to the terminal along the respective target.
 

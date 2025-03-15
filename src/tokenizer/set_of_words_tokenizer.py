@@ -90,23 +90,3 @@ class SetOfWordsTokenizerRepShort(SetOfWordsTokenizer):
             tokens_file=os.path.join(dataset_path, "target_tokens.json"),
             extra_tokens_mapping=self._MAPPING
         )
-    
-
-class SetOfWordsTokenizerGPT(SetOfWordsTokenizer):
-    _MAPPING = {
-            ".": "<point>",
-            ",": "<comma>",
-            "!": "<exclamationMark>",
-            "\"": "<quote>",
-            ":": "<colon>",
-            "?": "<questionMark>",
-            "(": "<openBraket>",
-            ")": "<closeBraket>",
-            ";": "<semicolon>",
-        }
-    
-    def __init__(self, dataset_path: str):
-        super().__init__(
-            tokens_file=os.path.join(dataset_path, "target_tokens_gpt_filtered.json"), 
-            extra_tokens_mapping=self._MAPPING
-        )

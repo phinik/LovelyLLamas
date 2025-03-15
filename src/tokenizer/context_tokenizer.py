@@ -11,8 +11,7 @@ class ContextTokenizer:
         super().__init__()
 
         self._dataset_path = dataset_path
-
-        self._context_tokens = self._load_tokens(os.path.join(self._dataset_path, "context_tokens.json"))
+        self._context_tokens = self._load_tokens("context_tokens.json")
         self._context_tokens += self.SPECIAL_TOKENS
         self._context_tokens = sorted(list(set(self._context_tokens)))
 
