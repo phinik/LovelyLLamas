@@ -1,7 +1,7 @@
 # Repository Structure
 Our repository is structured as follows:
 
-- checkpoints => **Don't touch**. Contains the two custom classifier models that are needed for evaluating the respective metrics.
+- checkpoints => **Don't touch**. Contains our models that are shipped with the repository. In particular, the two custom classifier models that are needed for evaluating the respective metrics.
 - data => everything related to the creation of the datasets, from data scraping, over EDA, post-processing, ChatGPT rewriting to dataset creation
 - datasets => the two datasets as zip files
 - demo => the demo web app as a docker compose
