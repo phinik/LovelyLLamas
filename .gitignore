@@ -23,6 +23,10 @@ wheels/
 *.egg
 get-pip.py
 
+# React
+demo/frontend/node_modules/
+dist/
+
 # Cython
 *.c
 *.cpp
@@ -34,9 +38,11 @@ npm-debug.log
 dist/
 
 # Data
+batches/
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+
 data/eval/
 batches/
 demo/backend/data/

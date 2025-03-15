@@ -1,0 +1,16 @@
+{
+    "batch_size": 10,
+    "block_size": 20,
+    "cached": true,
+    "checkpoints": "./checkpoints/final_dmodel_64_2024_12_12_bert_ctc",
+    "dataset": "/homes/21donn/dataset_2024_12_12_gpt",
+    "epochs": 100,
+    "model": "og_transformer",
+    "model_config": "src/transformer_configs/dmodel_64_tiny.json",
+    "name": "final_dmodel_64_2024_12_12_bert_ctc",
+    "num_workers": 4,
+    "overview": "ctc",
+    "target": "default",
+    "tensorboard": "./tensorboard/final_dmodel_64_2024_12_12_bert_ctc",
+    "tokenizer": "bert"
+}
