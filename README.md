@@ -20,7 +20,7 @@ Our two datasets are shipped with the repo, though as zip files in order to spee
 We provide you with some of our models so that you can test them without having to train a new model:
 - final_dmodel_64_2024_12_12_bert_ctc: Medium CTC Transformer using the Bert tokenizer. Trained on the wetter.com dataset. To be used with the `src/*_transformer.py` files.
 - test_dmodel_256_2024_12_12_bert_ct_apo: Huge CT Transformer using the Bert tokenizer. Trained on the ChatGPT dataset. To be used with the `src/*_transformer.py` files.
-
+- lstm: Medium Full Context LSTM using the Bert tokenizer. Trained on the wetter.com dataset. To be used with the `src/*_lstm.py` files.
 
 # How to run our models
 Before running any of our models, make sure you have activated the poetry virtual environment. For this, cd into our repository and simply type `poetry shell`. Now you are good to go.
