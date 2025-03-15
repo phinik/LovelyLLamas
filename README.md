@@ -13,6 +13,8 @@ We are using [Poetry](https://python-poetry.org/) for dependency management. Hen
 1. Install Poetry if you have not already. Click [HERE](https://python-poetry.org/docs/#installing-with-the-official-installer) if you need a tutorial.
 2. Clone our repository, cd into it and run `poetry install` in the root directory of our repository.
 
+**Beware, this repository was developed using Linux. Its compatibility with other operating systems was not tested.**
+
 # Installing a dataset
 Our two datasets are shipped with the repo, though as zip files in order to speed up the download. The zip files are contained in the `datasets` directory. To use any of the two, simply unzip the zip file to a location of your choice. `dataset_2024_12_12_wettercom.zip` contains the data collected from wetter.com, whereas `dataset_2024_12_12_chatGPT` contains the weather reports that were rewritten with the help of ChatGPT.
 
