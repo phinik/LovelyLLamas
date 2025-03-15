@@ -1,0 +1,16 @@
+{
+    "activation": "relu",
+    "batch_first": true,
+    "d_model": 256,
+    "dim_feedforward": 512,
+    "dropout": 0.1,
+    "n_head": 4,
+    "n_layers": 2,
+    "n_position": 200,
+    "name": "OG Transformer",
+    "norm_first": true,
+    "src_pad_idx": 1188,
+    "src_vocab_size": 1260,
+    "tgt_pad_idx": 8174,
+    "tgt_vocab_size": 8175
+}
