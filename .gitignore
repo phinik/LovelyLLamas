@@ -37,8 +37,12 @@ dist/
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+data/eval/
 batches/
 demo/backend/data/
+demo/backend/assets/
+demo/backend/src_model/
+legacy/
 
 # Environment
 .env

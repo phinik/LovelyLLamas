@@ -1,18 +1,161 @@
+"""
+Weather GRU Models
+
+This module contains three GRU-based models for weather text generation:
+- BasicWeatherGRU: Simple GRU model with feature encoding
+- AdvancedWeatherGRU: GRU with feature-specific processing and residual connections
+- AttentionWeatherGRU: GRU with attention mechanism for better context handling
+
+Author: Data Science Team
+"""
+
 import torch
-import re
 import math
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer
-from tqdm.notebook import tqdm
-import numpy as np
-import json
-import os
 import random
+from collections import Counter
+from torch.utils.data import Dataset, DataLoader
 
-class WeatherGRU(nn.Module):
+
+# Set device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class PositionalEncoding(nn.Module):
+    """
+    Positional encoding to provide sequence position information to the model.
+    
+    Adds sinusoidal positional embeddings to input tensors, helping the model
+    understand sequence ordering.
+    
+    Args:
+        d_model (int): Dimension of the model
+        dropout (float): Dropout probability
+        max_len (int): Maximum sequence length
+    """
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        """
+        Add positional encoding to input tensor.
+        
+        Args:
+            x (torch.Tensor): Input tensor [batch_size, seq_len, embedding_dim]
+            
+        Returns:
+            torch.Tensor: Tensor with positional encoding added
+        """
+        x = x + self.pe[:, :x.size(1), :]
+        return self.dropout(x)
+
+
+class ResidualGRU(nn.Module):
+    """
+    GRU with residual connections for better gradient flow.
+    
+    Implements stacked GRU layers with layer normalization and residual connections
+    for more stable training of deep networks.
+    
+    Args:
+        input_size (int): Size of input features
+        hidden_size (int): Size of hidden layers
+        num_layers (int): Number of GRU layers
+        dropout (float): Dropout probability
+        batch_first (bool): If True, input and output tensors are (batch, seq, feature)
+    """
+    def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.0, batch_first=True):
+        super(ResidualGRU, self).__init__()
+        
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.batch_first = batch_first
+        
+        # Input projection if input size doesn't match hidden size
+        self.input_proj = nn.Linear(input_size, hidden_size) if input_size != hidden_size else None
+        
+        # Create stacked GRU layers with layer normalization and residual connections
+        self.gru_layers = nn.ModuleList()
+        self.norm_layers = nn.ModuleList()
+        
+        for i in range(num_layers):
+            layer_input_size = hidden_size
+            self.gru_layers.append(nn.GRU(
+                input_size=layer_input_size,
+                hidden_size=hidden_size,
+                num_layers=1,
+                batch_first=batch_first
+            ))
+            self.norm_layers.append(nn.LayerNorm(hidden_size))
+        
+        self.dropout = nn.Dropout(dropout)
+    
+    def forward(self, input, hidden=None):
+        """
+        Process input through stacked GRU layers with residual connections.
+        
+        Args:
+            input (torch.Tensor): Input tensor
+            hidden (torch.Tensor, optional): Initial hidden state
+            
+        Returns:
+            tuple: (output, hidden_state)
+        """
+        # Project input if needed
+        if self.input_proj is not None:
+            output = self.input_proj(input)
+        else:
+            output = input
+        
+        # Initialize hidden state if not provided
+        if hidden is None:
+            batch_size = input.size(0) if self.batch_first else input.size(1)
+            hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=input.device)
+        
+        # Process through each layer with residual connections
+        hidden_states = []
+        for i in range(self.num_layers):
+            residual = output
+            output, layer_hidden = self.gru_layers[i](output, hidden[i:i+1] if hidden is not None else None)
+            hidden_states.append(layer_hidden)
+            
+            # Apply normalization and residual connection
+            output = self.norm_layers[i](output + residual)
+            output = self.dropout(output)
+        
+        # Combine hidden states
+        combined_hidden = torch.cat(hidden_states, dim=0)
+        
+        return output, combined_hidden
+
+
+class BasicWeatherGRU(nn.Module):
+    """
+    Basic GRU model for weather text generation.
+    
+    Takes weather features as input and generates text using a GRU architecture
+    with feature encoding and token embedding.
+    
+    Args:
+        feature_dim (int): Dimension of input features
+        vocab_size (int): Size of vocabulary
+        embedding_dim (int): Dimension of embedding vectors
+        hidden_dim (int): Dimension of hidden layer
+        n_layers (int): Number of GRU layers
+        dropout (float): Dropout probability
+    """
     def __init__(self, feature_dim, vocab_size, embedding_dim=256, hidden_dim=512, n_layers=2, dropout=0.1):
         super().__init__()
         
@@ -65,6 +208,17 @@ class WeatherGRU(nn.Module):
         self.n_layers = n_layers
         
     def forward(self, features, tokens, teacher_forcing_ratio=1.0):
+        """
+        Forward pass for training.
+        
+        Args:
+            features (torch.Tensor): Input features [batch_size, seq_len, feature_dim]
+            tokens (torch.Tensor): Target token indices [batch_size, seq_len]
+            teacher_forcing_ratio (float): Probability of using teacher forcing
+            
+        Returns:
+            torch.Tensor: Output logits [batch_size, seq_len, vocab_size]
+        """
         # Add input validation
         if torch.isnan(features).any():
             raise ValueError("NaN detected in input features")
@@ -128,6 +282,9 @@ class WeatherGRU(nn.Module):
             batch_size = features.size(0)
             seq_len = features.size(1)
             
+            # normalize features
+            features = (features - features.mean()) / (features.std() + 1e-8)
+
             # Scale features
             features = torch.clamp(features, -10, 10)
             
@@ -167,7 +324,7 @@ class WeatherGRU(nn.Module):
                 logits = self.output_layer(output)
                 
                 # Use argmax for deterministic token selection
-                # next_token = logits.argmax(dim=2)
+                # next_token = logits.argmax(2)
                 # Scale logits with very small temperature
                 logits = logits.squeeze(1) / 0.1
                 probs = F.softmax(logits, dim=-1)
@@ -188,11 +345,23 @@ class WeatherGRU(nn.Module):
             # Concatenate generated tokens
             generated_tokens = torch.cat(generated_tokens, dim=1)
             return generated_tokens
-        
 
-class WeatherTextGRU(nn.Module):
+
+class AdvancedWeatherGRU(nn.Module):
+    """
+    Advanced GRU model for weather text generation with feature-specific processing.
+    
+    Uses separate projections for different types of weather features and
+    incorporates a residual GRU architecture with positional encoding.
+    
+    Args:
+        feature_dim (int): Dimension of input features
+        hidden_size (int): Size of hidden layers
+        vocab_size (int): Size of vocabulary
+        dropout (float): Dropout probability
+    """
     def __init__(self, feature_dim, hidden_size, vocab_size, dropout=0.2):
-        super(WeatherTextGRU, self).__init__()
+        super(AdvancedWeatherGRU, self).__init__()
         
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
@@ -256,7 +425,12 @@ class WeatherTextGRU(nn.Module):
         self.apply(self._init_weights)
         
     def _init_weights(self, module):
-        """Initialize weights with improved schemes"""
+        """
+        Initialize weights with improved schemes.
+        
+        Args:
+            module: PyTorch module to initialize
+        """
         if isinstance(module, nn.Linear):
             # Slightly adjusted Xavier initialization
             nn.init.xavier_uniform_(module.weight, gain=1.0)
@@ -277,6 +451,17 @@ class WeatherTextGRU(nn.Module):
             nn.init.zeros_(module.bias)
     
     def forward(self, features, target_tokens=None, teacher_forcing_ratio=0.5):
+        """
+        Forward pass for training the model.
+        
+        Args:
+            features (torch.Tensor): Input features [batch_size, seq_len, feature_dim]
+            target_tokens (torch.Tensor, optional): Target token indices
+            teacher_forcing_ratio (float): Probability of using teacher forcing
+            
+        Returns:
+            torch.Tensor: Output logits [batch_size, seq_len, vocab_size]
+        """
         batch_size = features.size(0)
         seq_len = features.size(1)
         
@@ -401,108 +586,26 @@ class WeatherTextGRU(nn.Module):
         return outputs
 
 
-# Helper modules
-
-class PositionalEncoding(nn.Module):
-    """Positional encoding to provide sequence position information"""
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        x = x + self.pe[:, :x.size(1), :]
-        return self.dropout(x)
-
-
-class ResidualGRU(nn.Module):
-    """GRU with residual connections for better gradient flow"""
-    def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.0, batch_first=True):
-        super(ResidualGRU, self).__init__()
-        
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.batch_first = batch_first
-        
-        # Input projection if input size doesn't match hidden size
-        self.input_proj = nn.Linear(input_size, hidden_size) if input_size != hidden_size else None
-        
-        # Create stacked GRU layers with layer normalization and residual connections
-        self.gru_layers = nn.ModuleList()
-        self.norm_layers = nn.ModuleList()
-        
-        for i in range(num_layers):
-            layer_input_size = hidden_size
-            self.gru_layers.append(nn.GRU(
-                input_size=layer_input_size,
-                hidden_size=hidden_size,
-                num_layers=1,
-                batch_first=batch_first
-            ))
-            self.norm_layers.append(nn.LayerNorm(hidden_size))
-        
-        self.dropout = nn.Dropout(dropout)
+class AttentionWeatherGRU(nn.Module):
+    """
+    Weather text generation model with GRU and attention mechanism.
     
-    def forward(self, input, hidden=None):
-        # Project input if needed
-        if self.input_proj is not None:
-            output = self.input_proj(input)
-        else:
-            output = input
-        
-        # Initialize hidden state if not provided
-        if hidden is None:
-            batch_size = input.size(0) if self.batch_first else input.size(1)
-            hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=input.device)
-        
-        # Process through each layer with residual connections
-        hidden_states = []
-        for i in range(self.num_layers):
-            residual = output
-            output, layer_hidden = self.gru_layers[i](output, hidden[i:i+1] if hidden is not None else None)
-            hidden_states.append(layer_hidden)
-            
-            # Apply normalization and residual connection
-            output = self.norm_layers[i](output + residual)
-            output = self.dropout(output)
-        
-        # Combine hidden states
-        combined_hidden = torch.cat(hidden_states, dim=0)
-        
-        return output, combined_hidden
+    Uses attention to focus on relevant parts of the input sequence
+    when generating each output token.
     
-import torch.nn as nn
-import torch.nn.functional as F
-from transformers import AutoTokenizer, BertTokenizer
-from torch.utils.data import DataLoader, Subset
-from tqdm import tqdm
-import random
-import numpy as np
-import time
-import math
-import os
-import json
-from collections import Counter
-# Weather Text Generator Model with GRU and Attention
-# Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-class WeatherTextGRU(nn.Module):
+    Args:
+        feature_dim (int): Dimension of input features
+        hidden_size (int): Size of hidden layers
+        vocab_size (int): Size of vocabulary
+        dropout (float): Dropout probability
+    """
     def __init__(self, feature_dim, hidden_size, vocab_size, dropout=0.2):
-        super(WeatherTextGRU, self).__init__()
+        super(AttentionWeatherGRU, self).__init__()
         
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
         
         # Feature processing - separate projections for different feature types
-        # This enhances correlation between features and text
         self.temp_proj = nn.Linear(1, hidden_size // 4)  # Temperature features
         self.humidity_proj = nn.Linear(1, hidden_size // 4)  # Humidity features
         self.cloud_proj = nn.Linear(1, hidden_size // 4)  # Cloudiness features
@@ -545,6 +648,17 @@ class WeatherTextGRU(nn.Module):
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, features, target_tokens=None, teacher_forcing_ratio=0.5):
+        """
+        Forward pass for training the model.
+        
+        Args:
+            features (torch.Tensor): Input features [batch_size, seq_len, feature_dim]
+            target_tokens (torch.Tensor, optional): Target token indices
+            teacher_forcing_ratio (float): Probability of using teacher forcing
+            
+        Returns:
+            torch.Tensor: Output logits [batch_size, seq_len, vocab_size]
+        """
         batch_size = features.size(0)
         seq_len = features.size(1)
         
@@ -598,7 +712,7 @@ class WeatherTextGRU(nn.Module):
         outputs = torch.zeros(batch_size, max_length, self.vocab_size, device=device)
         
         # Initialize first token probability
-        outputs[:, 0, decoder_input[0, 0]] = 1.0
+        outputs[:, 0, decoder_input.squeeze(1)[0]] = 1.0
         
         # Generate sequence token by token
         for t in range(1, max_length):
@@ -645,15 +759,74 @@ class WeatherTextGRU(nn.Module):
                 # Use predicted token
                 top_token = prediction.argmax(1).unsqueeze(1)
                 decoder_input = top_token
-                # temperature = 0.7  # Adjust between 0.5-1.0 for creativity/coherence balance
-                # probs = F.softmax(prediction / temperature, dim=1)
-                # decoder_input = torch.multinomial(probs, 1)
-                # Replace your existing multinomial sampling code with this:
-                # generated_tokens_mapped = torch.zeros(outputs[0].size(0), dtype=torch.long, device=device)
-
-                # # Apply nucleus sampling for each position in the sequence
-                # for pos in range(outputs[0].size(0)):
-                #     logits = outputs[0][pos]  # Get logits for this position
-                #     generated_tokens_mapped[pos] = nucleus_sampling(logits, p=0.9)
+        
         return outputs
 
+# Utility functions for model handling
+
+def create_model_by_name(model_name, feature_dim, vocab_size, hidden_size=512, dropout=0.2):
+    """
+    Factory function to create a model instance by name.
+    
+    Args:
+        model_name (str): One of "basic", "advanced", or "attention"
+        feature_dim (int): Dimension of input features
+        vocab_size (int): Size of vocabulary
+        hidden_size (int): Size of hidden layers
+        dropout (float): Dropout probability
+        
+    Returns:
+        nn.Module: Instantiated model
+    """
+    if model_name.lower() == "basic":
+        return BasicWeatherGRU(
+            feature_dim=feature_dim,
+            vocab_size=vocab_size,
+            embedding_dim=hidden_size // 2,
+            hidden_dim=hidden_size,
+            dropout=dropout
+        )
+    elif model_name.lower() == "advanced":
+        return AdvancedWeatherGRU(
+            feature_dim=feature_dim,
+            hidden_size=hidden_size,
+            vocab_size=vocab_size,
+            dropout=dropout
+        )
+    elif model_name.lower() == "attention":
+        return AttentionWeatherGRU(
+            feature_dim=feature_dim,
+            hidden_size=hidden_size,
+            vocab_size=vocab_size,
+            dropout=dropout
+        )
+    else:
+        raise ValueError(f"Unknown model name: {model_name}. Choose from 'basic', 'advanced', or 'attention'")
+
+
+def load_model_checkpoint(model, checkpoint_path):
+    """
+    Load a saved model checkpoint.
+    
+    Args:
+        model (nn.Module): Model instance to load weights into
+        checkpoint_path (str): Path to the checkpoint file
+        
+    Returns:
+        nn.Module: Model with loaded weights
+    """
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    return model
+
+
+# Explicitly define what gets imported when using "from weather_gru_models import *"
+__all__ = [
+    'BasicWeatherGRU',
+    'AdvancedWeatherGRU',
+    'AttentionWeatherGRU',
+    'create_model_by_name',
+    'load_model_checkpoint',
+    'PositionalEncoding',
+    'ResidualGRU'
+]

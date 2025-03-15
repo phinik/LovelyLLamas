@@ -1,0 +1,54 @@
+{
+    "basic":{
+        "tokens_total": 30007,
+        "tokens_used": 444,
+        "percentage": 1.479,
+        "loss@1.6M": 1.1792,
+        "details@1.6M": {
+            "epochs": 1,
+            "batch_size": 128,
+            "embedding_dim": 256,
+            "hidden_dim": 512,
+            "layers": 1,
+            "accurate_parameters": 1609236
+        }
+    },
+    "advanced":{
+        "tokens_total": 30002,
+        "tokens_used": 8150,
+        "percentage": 27.161,
+        "loss@8M": 2.9484,
+        "details@8M": {
+            "epochs": 20,
+            "batch_size": 128,
+            "hidden_dim": 256,
+            "accurate_parameters": 8319262
+        },
+        "loss@20M": 2.6473,
+        "details@20M": {
+            "epochs": 20,
+            "batch_size": 128,
+            "hidden_dim": 512,
+            "accurate_parameters": 20693598
+        }
+    },
+    "attention": {
+        "tokens_total": 30002,
+        "tokens_used": 8150,
+        "percentage": 27.161,
+        "loss@7M": 2.2774,
+        "details@7M": {
+            "epochs": 10,
+            "batch_size": 128,
+            "hidden_dim": 256,
+            "accurate_parameters": 7460894
+        },
+        "loss@17M": 2.1820,
+        "details@17M": {
+            "epochs": 10,
+            "batch_size": 128,
+            "hidden_dim": 512,
+            "accurate_parameters": 17272926
+        }
+    }
+}
