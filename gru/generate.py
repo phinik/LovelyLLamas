@@ -19,6 +19,9 @@ from weather_datasets import (
     get_city_samples
 )
 
+# Import the special attention model loader
+from attention_model_loader import load_compatible_attention_model
+
 def generate_weather_text(model_type="basic", model_path=None, cities=None, num_samples=3):
     """
     Generate weather text for specific cities or random samples,
@@ -60,48 +63,91 @@ def generate_weather_text(model_type="basic", model_path=None, cities=None, num_
     print(f"Loading {model_type} model from {model_path} to {device}...")
     
     try:
-        checkpoint = torch.load(model_path, map_location=device)
-        token_mappings = checkpoint['token_mappings']
-        model_config = checkpoint.get('config', {})
-        
-        # Get feature dimension from the dataset
-        feature_dim = clean_dataset.dataset.feature_dim
-        
-        # Get configuration parameters from checkpoint
-        hidden_size = model_config.get('hidden_dim', 512)
-        n_layers = model_config.get('n_layers', 1)
-        embedding_dim = model_config.get('embedding_dim', hidden_size // 2)
-        dropout = model_config.get('dropout', 0.1)
-        vocab_size = len(token_mappings['used_token_ids'])
-        
-        print(f"Creating model with feature_dim={feature_dim}, vocab_size={vocab_size}, " 
-              f"embedding_dim={embedding_dim}, hidden_dim={hidden_size}, n_layers={n_layers}")
-        
-        # Create model based on type
-        if model_type.lower() == "basic":
-            # For BasicWeatherGRU, import and use the class directly
-            model = BasicWeatherGRU(
+        # For attention models, use special compatible loader
+        if model_type.lower() == "attention":
+            # Get feature dimension from the dataset
+            feature_dim = clean_dataset.dataset.feature_dim
+            
+            # Use special loader for attention models
+            model, token_mappings = load_compatible_attention_model(
+                checkpoint_path=model_path,
                 feature_dim=feature_dim,
-                vocab_size=vocab_size,
-                embedding_dim=embedding_dim,
-                hidden_dim=hidden_size,
-                n_layers=n_layers,
-                dropout=dropout
+                device=device
             )
+            print(f"Successfully loaded attention model using compatible loader")
         else:
-            # For other model types, use the factory function
-            model = create_model_by_name(
-                model_name=model_type,
-                feature_dim=feature_dim,
-                vocab_size=vocab_size,
-                hidden_size=hidden_size
-            )
-        
-        # Load the model weights
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(device)
-        print(f"Successfully loaded {model_type} model")
-        
+            # For basic and advanced models, use normal loading approach
+            checkpoint = torch.load(model_path, map_location=device)
+            token_mappings = checkpoint['token_mappings']
+            
+            # Get model config - check all possible locations based on model type
+            model_config = {}
+            
+            # Different models store config in different places
+            if 'config' in checkpoint:
+                # For basic models
+                model_config = checkpoint['config']
+                print("Found configuration in 'config' key")
+            elif 'model_config' in checkpoint:
+                # For advanced/attention models
+                model_config = checkpoint['model_config']
+                print("Found configuration in 'model_config' key")
+            else:
+                print("No configuration found in checkpoint, will detect from state_dict")
+                
+            # If no config or incomplete config, detect from state dict
+            if not model_config or 'hidden_dim' not in model_config:
+                if 'model_state_dict' in checkpoint:
+                    state_dict = checkpoint['model_state_dict']
+                    
+                    # Detect key dimensions from state dict
+                    detected_config = detect_model_config_from_state_dict(state_dict, model_type)
+                    
+                    # Update model config with detected values
+                    for key, value in detected_config.items():
+                        if key not in model_config:
+                            model_config[key] = value
+                    
+                    print(f"Detected configuration from state dict: {detected_config}")
+            
+            # Get feature dimension from the dataset
+            feature_dim = clean_dataset.dataset.feature_dim
+            
+            # Get configuration parameters from checkpoint or use defaults
+            hidden_size = model_config.get('hidden_dim', 512)
+            n_layers = model_config.get('n_layers', 2 if model_type != 'basic' else 1)
+            embedding_dim = model_config.get('embedding_dim', hidden_size // 2)
+            dropout = model_config.get('dropout', 0.1)
+            vocab_size = len(token_mappings['used_token_ids'])
+            
+            print(f"Creating model with feature_dim={feature_dim}, vocab_size={vocab_size}, " 
+                f"embedding_dim={embedding_dim}, hidden_dim={hidden_size}, n_layers={n_layers}")
+            
+            # Create model based on type
+            if model_type.lower() == "basic":
+                # For BasicWeatherGRU, import and use the class directly
+                model = BasicWeatherGRU(
+                    feature_dim=feature_dim,
+                    vocab_size=vocab_size,
+                    embedding_dim=embedding_dim,
+                    hidden_dim=hidden_size,
+                    n_layers=n_layers,
+                    dropout=dropout
+                )
+            else:
+                # For advanced model, use the factory function
+                model = create_model_by_name(
+                    model_name=model_type,
+                    feature_dim=feature_dim,
+                    vocab_size=vocab_size,
+                    hidden_size=hidden_size
+                )
+            
+            # Load the model weights
+            model.load_state_dict(checkpoint['model_state_dict'])
+            model.to(device)
+            print(f"Successfully loaded {model_type} model")
+            
     except Exception as e:
         print(f"Error loading model: {str(e)}")
         return
@@ -199,6 +245,55 @@ def generate_weather_text(model_type="basic", model_path=None, cities=None, num_
             generate_samples(model, tokenizer, city_dataloader, token_mappings, num_samples=num_samples)
 
 
+def detect_model_config_from_state_dict(state_dict, model_type):
+    """
+    Detect model configuration from state dictionary.
+    
+    Args:
+        state_dict: Model state dictionary
+        model_type: Type of model ('basic', 'advanced', 'attention')
+        
+    Returns:
+        dict: Detected model configuration
+    """
+    config = {}
+    
+    # Detect embedding dimension
+    if 'embedding.weight' in state_dict:
+        config['embedding_dim'] = state_dict['embedding.weight'].shape[1]
+    
+    # Detect hidden dimension based on model type
+    if model_type == 'basic':
+        # For BasicWeatherGRU
+        if 'gru.weight_ih_l0' in state_dict:
+            config['hidden_dim'] = state_dict['gru.weight_ih_l0'].shape[0] // 3
+        elif 'output_layer.1.weight' in state_dict:
+            config['hidden_dim'] = state_dict['output_layer.1.weight'].shape[1]
+    elif model_type == 'attention':
+        # For AttentionWeatherGRU
+        if 'encoder_gru.weight_ih_l0' in state_dict:
+            config['hidden_dim'] = state_dict['encoder_gru.weight_ih_l0'].shape[0] // 3
+        elif 'decoder_gru.weight_ih_l0' in state_dict:
+            config['hidden_dim'] = state_dict['decoder_gru.weight_ih_l0'].shape[0] // 3
+    else:
+        # For AdvancedWeatherGRU
+        if 'encoder_gru.gru_layers.0.weight_ih_l0' in state_dict:
+            config['hidden_dim'] = state_dict['encoder_gru.gru_layers.0.weight_ih_l0'].shape[1]
+        elif 'decoder_gru.gru_layers.0.weight_ih_l0' in state_dict:
+            config['hidden_dim'] = state_dict['decoder_gru.gru_layers.0.weight_ih_l0'].shape[1]
+        
+    # Detect number of layers
+    n_layers = 1
+    for key in state_dict.keys():
+        if 'weight_ih_l' in key:
+            layer_num = int(key.split('weight_ih_l')[1].split('_')[0]) + 1
+            n_layers = max(n_layers, layer_num)
+    
+    config['n_layers'] = n_layers
+    
+    return config
+
+
 def generate_samples(model, tokenizer, data_loader, token_mappings, num_samples=3):
     """Generate text samples from the model"""
     # Get device from model
@@ -291,12 +386,15 @@ def generate_samples(model, tokenizer, data_loader, token_mappings, num_samples=
 if __name__ == "__main__":
     # Specify which GRU model type to use
     # Options: "basic", "advanced", or "attention"
-    model_type = "advanced"
+    model_type = "advanced"  # Try with attention model
     
     # Specific cities to generate for (use None or [] for random cities)
-    specific_cities = ["Paraćin", "Bull Bay", "Makov", "Carroll", "Ormiston", "Mayo Lara", "Estancia Toro Paso", "Sadlers", "Jedlina-Zdrój", "Līhuʻe", "Rosario"]
+    specific_cities = ["Paraćin", "Bull Bay", "Makov", "Carroll", "Ormiston"]
     # specific_cities = None  # Uncomment to use random cities
-    model_path = 'gru/models/advanced_20M.pt'
+    
+    # Choose which model file to use
+    model_path = 'gru/models/advanced_8M.pt'  # Try with attention model
+    
     # Generate weather text
     generate_weather_text(
         model_path=model_path,
