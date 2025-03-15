@@ -32,15 +32,23 @@ dist/
 *.cpp
 *.pyd
 
+# React
+node_modules/
+npm-debug.log
+dist/
+
 # Data
 batches/
 data/**/*.json
 data/unused_ideas/formatted
 data/unused_ideas/translated_example
+
+data/eval/
+batches/
 demo/backend/data/
 demo/backend/assets/
 demo/backend/src_model/
-demo/backend/generate.py
+legacy/
 
 # Environment
 .env
@@ -55,4 +63,7 @@ htmlcov/
 .pytest_cache/
 
 # Models
+*.model
+*.vocab
+*.pth
 *.pt

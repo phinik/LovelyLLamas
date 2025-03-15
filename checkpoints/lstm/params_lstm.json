@@ -1,0 +1,17 @@
+{
+    "attention": true,
+    "bidirectional": false,
+    "dropout": 0.1,
+    "embedding_dim": 64,
+    "hidden_dim": 64,
+    "label_smoothing": 0.1,
+    "name": "dummy_config",
+    "num_layers": 1,
+    "positional_encoding": true,
+    "src_pad_idx": 1188,
+    "src_vocab_size": 1260,
+    "tgt_emb_prj_weight_sharing": false,
+    "tgt_pad_idx": 305,
+    "tgt_vocab_size": 306,
+    "use_layer_norm": true
+}
