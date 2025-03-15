@@ -1,0 +1,17 @@
+{
+    "batch_size": 10,
+    "block_size": 20,
+    "cached": true,
+    "checkpoints": "C:\\Users\\Agando\\Desktop\\Uni\\Master-Projekt\\checkpoints\\basic 64",
+    "dataset": "C:\\Users\\Agando\\Desktop\\Uni\\Master-Projekt\\dataset",
+    "epochs": 100,
+    "model": "lstm",
+    "model_config": "C:\\Users\\Agando\\Desktop\\Uni\\Master-Projekt\\LovelyLLamas\\src\\lstm_configs\\basic_64.json",
+    "name": "basic 64",
+    "num_samples": -1,
+    "num_workers": 4,
+    "overview": "full",
+    "target": "default",
+    "tensorboard": "C:\\Users\\Agando\\Desktop\\Uni\\Master-Projekt\\tensorboards\\basic 64",
+    "tokenizer": "bert"
+}
