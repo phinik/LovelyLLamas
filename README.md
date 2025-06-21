@@ -1,3 +1,6 @@
+# Welcome
+This repository represents the work of @phinik, @nielshannemann and @Ace-Of-Snakes, who collaborated in the winter term 2024/2025 for a university project on efficient methods for machine learning. The goal of this project was to train "large" language models efficiently, i.e. with as little data and computational resources as possible. The topic of this group was to create short natural language weather reports given hourly weather information such as temperature, cloudiness, etc. You can find the full final report [HERE](https://github.com/phinik/LovelyLLamas/blob/main/final_report.pdf).
+
 # Repository Structure
 Our repository is structured as follows:
 
